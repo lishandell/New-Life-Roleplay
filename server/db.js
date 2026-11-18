@@ -70,6 +70,7 @@ export function initDatabase() {
     CREATE TABLE IF NOT EXISTS whitelist_applications (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       trackingCode TEXT NOT NULL UNIQUE,
+      discordId TEXT NOT NULL DEFAULT '',
       discordTag TEXT NOT NULL,
       age INTEGER NOT NULL,
       country TEXT NOT NULL,
@@ -93,6 +94,13 @@ export function initDatabase() {
       createdAt TEXT NOT NULL
     );
   `);
+
+  // Safe migration for existing databases
+  try {
+    db.exec("ALTER TABLE whitelist_applications ADD COLUMN discordId TEXT NOT NULL DEFAULT ''");
+  } catch {
+    // Column already exists
+  }
 
   seedDefaults();
 }
@@ -136,6 +144,11 @@ function seedDefaults() {
       'Las postulaciones a la Whitelist están abiertas. Completa tu historia de personaje y conocimientos de rol para unirte a la ciudad.',
     maintenanceBanner: '',
     discordWebhookUrl: '',
+    discordNewsWebhookUrl: '',
+    discordAdminRoleIds: '',
+    discordStaffRoleIds: '',
+    discordVipRoleIds: '',
+    discordWhitelistRoleIds: '',
   };
 
   const insertSetting = db.prepare(

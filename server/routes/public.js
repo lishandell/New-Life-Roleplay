@@ -1,6 +1,8 @@
 import express from 'express';
 import crypto from 'node:crypto';
 import { db } from '../db.js';
+import { getDiscordUserFromRequest } from '../auth.js';
+import { getSetting, sendDiscordEmbed } from '../utils/discordNotify.js';
 
 const router = express.Router();
 
@@ -8,7 +10,12 @@ function getPublicSettings() {
   const rows = db.prepare('SELECT key, value FROM settings').all();
   const settings = {};
   for (const row of rows) {
-    if (row.key === 'discordWebhookUrl') continue; // Never expose webhook URL publicly
+    if (
+      row.key === 'discordWebhookUrl' ||
+      row.key === 'discordNewsWebhookUrl'
+    ) {
+      continue; // Never expose webhook URLs publicly
+    }
     settings[row.key] = row.value;
   }
   return settings;
@@ -42,8 +49,10 @@ router.post('/whitelist', async (req, res) => {
       .json({ error: 'Las postulaciones a la Whitelist están cerradas temporalmente.' });
   }
 
+  const discordUser = getDiscordUserFromRequest(req);
+
   const {
-    discordTag = '',
+    discordTag = discordUser?.username || '',
     age,
     country = '',
     mtaSerial = '',
@@ -54,8 +63,11 @@ router.post('/whitelist', async (req, res) => {
   } = req.body || {};
 
   const parsedAge = Number(age);
+  const finalDiscordTag = (discordTag || discordUser?.username || '').trim();
+  const finalDiscordId = discordUser?.discordId || '';
+
   if (
-    !discordTag.trim() ||
+    !finalDiscordTag ||
     !Number.isFinite(parsedAge) ||
     parsedAge < 13 ||
     parsedAge > 99 ||
@@ -79,11 +91,12 @@ router.post('/whitelist', async (req, res) => {
 
   db.prepare(
     `INSERT INTO whitelist_applications
-    (trackingCode, discordTag, age, country, mtaSerial, characterName, characterBackstory, rpConcepts, scenarioAnswer, status, createdAt, updatedAt)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)`
+    (trackingCode, discordId, discordTag, age, country, mtaSerial, characterName, characterBackstory, rpConcepts, scenarioAnswer, status, createdAt, updatedAt)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)`
   ).run(
     trackingCode,
-    discordTag.trim(),
+    finalDiscordId,
+    finalDiscordTag,
     parsedAge,
     country.trim(),
     mtaSerial.trim(),
@@ -96,29 +109,24 @@ router.post('/whitelist', async (req, res) => {
   );
 
   // Optional Discord webhook notification
-  const webhookRow = db
-    .prepare("SELECT value FROM settings WHERE key = 'discordWebhookUrl'")
-    .get();
-  if (webhookRow?.value && webhookRow.value.startsWith('https://discord.com/api/webhooks/')) {
-    fetch(webhookRow.value, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        embeds: [
-          {
-            title: '📋 Nueva Solicitud de Whitelist',
-            color: 0xd98d75,
-            fields: [
-              { name: 'Código', value: trackingCode, inline: true },
-              { name: 'Discord', value: discordTag.trim(), inline: true },
-              { name: 'Personaje IC', value: characterName.trim(), inline: true },
-              { name: 'Edad / País', value: `${parsedAge} años (${country.trim()})`, inline: true },
-            ],
-            timestamp: now,
-          },
-        ],
-      }),
-    }).catch(() => {});
+  const webhookUrl =
+    getSetting('discordWebhookUrl') || process.env.DISCORD_WEBHOOK_URL || '';
+  if (webhookUrl) {
+    await sendDiscordEmbed(webhookUrl, {
+      title: '📋 Nueva Solicitud de Whitelist',
+      color: 0xd98d75,
+      fields: [
+        { name: 'Código', value: trackingCode, inline: true },
+        {
+          name: 'Discord',
+          value: finalDiscordId ? `<@${finalDiscordId}> (${finalDiscordTag})` : finalDiscordTag,
+          inline: true,
+        },
+        { name: 'Personaje IC', value: characterName.trim(), inline: true },
+        { name: 'Edad / País', value: `${parsedAge} años (${country.trim()})`, inline: true },
+      ],
+      timestamp: now,
+    });
   }
 
   res.status(201).json({
@@ -126,6 +134,19 @@ router.post('/whitelist', async (req, res) => {
     status: 'pending',
     message: 'Solicitud enviada correctamente.',
   });
+});
+
+router.get('/whitelist/my-applications', (req, res) => {
+  const discordUser = getDiscordUserFromRequest(req);
+  if (!discordUser) {
+    return res.json([]);
+  }
+  const apps = db
+    .prepare(
+      'SELECT trackingCode, characterName, status, staffNote, createdAt, updatedAt FROM whitelist_applications WHERE discordId = ? ORDER BY id DESC'
+    )
+    .all(discordUser.discordId);
+  res.json(apps);
 });
 
 router.get('/whitelist/status', (req, res) => {

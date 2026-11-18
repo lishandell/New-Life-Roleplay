@@ -19,6 +19,8 @@ const SECRET_ADMIN_ROUTE = '/portal-nl-admin';
 
 function AppShell() {
   const [siteData, setSiteData] = useState(null);
+  const [discordUser, setDiscordUser] = useState(null);
+  const [oauthConfigured, setOauthConfigured] = useState(false);
   const [toasts, setToasts] = useState([]);
   const navigate = useNavigate();
   const location = useLocation();
@@ -37,8 +39,13 @@ function AppShell() {
 
   const loadSiteData = useCallback(async () => {
     try {
-      const data = await api.getSiteData();
+      const [data, authRes] = await Promise.all([
+        api.getSiteData(),
+        api.getDiscordMe().catch(() => ({ user: null, oauthConfigured: false })),
+      ]);
       setSiteData(data);
+      setDiscordUser(authRes.user || null);
+      setOauthConfigured(Boolean(authRes.oauthConfigured));
     } catch {
       // Silent fallback if backend is starting
     }
@@ -47,6 +54,28 @@ function AppShell() {
   useEffect(() => {
     loadSiteData();
   }, [loadSiteData]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('auth_success') === '1') {
+      onToast('Discord Conectado', 'Has iniciado sesión con tu cuenta de Discord.', 'success');
+      navigate(location.pathname, { replace: true });
+    } else if (params.get('auth_error')) {
+      const err = params.get('auth_error');
+      const msg =
+        err === 'discord_not_configured'
+          ? 'Falta configurar DISCORD_CLIENT_ID y DISCORD_CLIENT_SECRET en las variables de entorno.'
+          : 'No se pudo completar el inicio de sesión con Discord.';
+      onToast('Error de Discord', msg, 'error');
+      navigate(location.pathname, { replace: true });
+    }
+  }, [location.search, location.pathname, navigate, onToast]);
+
+  const handleDiscordLogout = async () => {
+    await api.logoutDiscord();
+    setDiscordUser(null);
+    onToast('Sesión cerrada', 'Desconectado de Discord.', 'info');
+  };
 
   // Secret keyboard shortcut: Ctrl + Shift + L opens the secret admin portal
   useEffect(() => {
@@ -65,7 +94,13 @@ function AppShell() {
   return (
     <div className="min-h-screen flex flex-col bg-nl-900 text-gray-100">
       {!isAdminRoute && (
-        <Navbar settings={siteData?.settings} onToast={onToast} />
+        <Navbar
+          settings={siteData?.settings}
+          discordUser={discordUser}
+          oauthConfigured={oauthConfigured}
+          onDiscordLogout={handleDiscordLogout}
+          onToast={onToast}
+        />
       )}
 
       <main className="flex-1">
@@ -79,6 +114,7 @@ function AppShell() {
             element={
               <WhitelistPage
                 settings={siteData?.settings}
+                discordUser={discordUser}
                 onToast={onToast}
               />
             }
@@ -91,6 +127,7 @@ function AppShell() {
             path={SECRET_ADMIN_ROUTE}
             element={
               <AdminPortal
+                discordUser={discordUser}
                 onToast={onToast}
                 onSiteRefresh={loadSiteData}
               />

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   FileCheck2,
   Search,
@@ -10,11 +10,11 @@ import {
 } from 'lucide-react';
 import { api } from '../api/client';
 
-export function WhitelistPage({ settings, onToast }) {
+export function WhitelistPage({ settings, discordUser, onToast }) {
   const isOpen = settings?.whitelistEnabled === 'true';
 
   const [form, setForm] = useState({
-    discordTag: '',
+    discordTag: discordUser?.username || '',
     age: '',
     country: '',
     mtaSerial: '',
@@ -25,6 +25,20 @@ export function WhitelistPage({ settings, onToast }) {
   });
   const [submitting, setSubmitting] = useState(false);
   const [submittedCode, setSubmittedCode] = useState('');
+  const [myApps, setMyApps] = useState([]);
+
+  useEffect(() => {
+    if (discordUser) {
+      setForm((prev) => ({
+        ...prev,
+        discordTag: prev.discordTag || discordUser.username || '',
+      }));
+      api
+        .getMyWhitelistApps()
+        .then(setMyApps)
+        .catch(() => {});
+    }
+  }, [discordUser]);
 
   const [lookupCode, setLookupCode] = useState('');
   const [lookupResult, setLookupResult] = useState(null);
@@ -89,6 +103,50 @@ export function WhitelistPage({ settings, onToast }) {
             'Completa tu solicitud para acceder al servidor y vive una experiencia de rol seria.'}
         </p>
       </div>
+
+      {/* My Discord Applications */}
+      {discordUser && myApps.length > 0 && (
+        <div className="glass-card rounded-2xl p-6 space-y-3">
+          <h2 className="text-sm font-bold text-white">
+            Mis Solicitudes ({discordUser.displayName})
+          </h2>
+          <div className="space-y-2">
+            {myApps.map((app) => (
+              <div
+                key={app.trackingCode}
+                className="bg-nl-900/80 border border-gray-800 rounded-xl p-3 flex items-center justify-between text-xs"
+              >
+                <div>
+                  <span className="font-mono text-nl-red font-bold">
+                    {app.trackingCode}
+                  </span>{' '}
+                  • <span className="text-white font-semibold">{app.characterName}</span>
+                  {app.staffNote && (
+                    <span className="block text-gray-400 mt-0.5">
+                      Nota Staff: {app.staffNote}
+                    </span>
+                  )}
+                </div>
+                <span
+                  className={`font-bold px-2.5 py-1 rounded-full ${
+                    app.status === 'approved'
+                      ? 'bg-emerald-500/20 text-emerald-400'
+                      : app.status === 'rejected'
+                      ? 'bg-red-500/20 text-red-400'
+                      : 'bg-amber-500/20 text-amber-400'
+                  }`}
+                >
+                  {app.status === 'approved'
+                    ? 'Aprobada'
+                    : app.status === 'rejected'
+                    ? 'Rechazada'
+                    : 'En Revisión'}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Status Tracker */}
       <div className="glass-card rounded-2xl p-6 space-y-4">

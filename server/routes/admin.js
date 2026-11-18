@@ -5,9 +5,15 @@ import {
   createSessionToken,
   hashPassword,
   requireAdmin,
+  requireStaffOrAdmin,
   setSessionCookie,
   verifyPassword,
 } from '../auth.js';
+import {
+  assignDiscordWhitelistRole,
+  notifyNewsPublished,
+  notifyWhitelistResult,
+} from '../utils/discordNotify.js';
 
 const router = express.Router();
 
@@ -43,7 +49,7 @@ router.post('/logout', (_req, res) => {
   res.json({ ok: true });
 });
 
-router.get('/me', requireAdmin, (req, res) => {
+router.get('/me', requireStaffOrAdmin, (req, res) => {
   res.json({
     authenticated: true,
     user: {
@@ -76,7 +82,7 @@ router.post('/change-password', requireAdmin, (req, res) => {
   res.json({ ok: true, message: 'Contraseña actualizada correctamente.' });
 });
 
-router.get('/dashboard', requireAdmin, (_req, res) => {
+router.get('/dashboard', requireStaffOrAdmin, (_req, res) => {
   const settingRows = db.prepare('SELECT key, value FROM settings').all();
   const settings = {};
   for (const r of settingRows) settings[r.key] = r.value;
@@ -117,7 +123,7 @@ router.put('/settings', requireAdmin, (req, res) => {
 });
 
 // --- NEWS CRUD ---
-router.post('/news', requireAdmin, (req, res) => {
+router.post('/news', requireAdmin, async (req, res) => {
   const {
     title = '',
     summary = '',
@@ -165,10 +171,13 @@ router.post('/news', requireAdmin, (req, res) => {
     );
 
   const created = db.prepare('SELECT * FROM news WHERE id = ?').get(info.lastInsertRowid);
+  if (created.isPublished === 1) {
+    notifyNewsPublished(created).catch(() => {});
+  }
   res.status(201).json(created);
 });
 
-router.put('/news/:id', requireAdmin, (req, res) => {
+router.put('/news/:id', requireAdmin, async (req, res) => {
   const id = Number(req.params.id);
   const existing = db.prepare('SELECT * FROM news WHERE id = ?').get(id);
   if (!existing) return res.status(404).json({ error: 'Noticia no encontrada.' });
@@ -204,7 +213,11 @@ router.put('/news/:id', requireAdmin, (req, res) => {
     id
   );
 
-  res.json(db.prepare('SELECT * FROM news WHERE id = ?').get(id));
+  const updated = db.prepare('SELECT * FROM news WHERE id = ?').get(id);
+  if (existing.isPublished === 0 && updated.isPublished === 1) {
+    notifyNewsPublished(updated).catch(() => {});
+  }
+  res.json(updated);
 });
 
 router.delete('/news/:id', requireAdmin, (req, res) => {
@@ -345,7 +358,7 @@ router.delete('/rules/:id', requireAdmin, (req, res) => {
 });
 
 // --- WHITELIST REVIEW ---
-router.patch('/whitelist/:id', requireAdmin, (req, res) => {
+router.patch('/whitelist/:id', requireStaffOrAdmin, async (req, res) => {
   const id = Number(req.params.id);
   const existing = db.prepare('SELECT * FROM whitelist_applications WHERE id = ?').get(id);
   if (!existing) return res.status(404).json({ error: 'Solicitud no encontrada.' });
@@ -360,7 +373,15 @@ router.patch('/whitelist/:id', requireAdmin, (req, res) => {
     'UPDATE whitelist_applications SET status = ?, staffNote = ?, reviewedBy = ?, updatedAt = ? WHERE id = ?'
   ).run(status, staffNote.trim(), req.admin.username, now, id);
 
-  res.json(db.prepare('SELECT * FROM whitelist_applications WHERE id = ?').get(id));
+  const updated = db.prepare('SELECT * FROM whitelist_applications WHERE id = ?').get(id);
+  if (status === 'approved' || status === 'rejected') {
+    notifyWhitelistResult(updated).catch(() => {});
+  }
+  if (status === 'approved' && updated.discordId) {
+    assignDiscordWhitelistRole(updated.discordId).catch(() => {});
+  }
+
+  res.json(updated);
 });
 
 router.delete('/whitelist/:id', requireAdmin, (req, res) => {

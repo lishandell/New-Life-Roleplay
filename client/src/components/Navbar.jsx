@@ -1,8 +1,14 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Copy, Play, Menu, X } from 'lucide-react';
+import { Copy, Play, Menu, X, LogIn, LogOut, Shield } from 'lucide-react';
 
-export function Navbar({ settings, onToast }) {
+export function Navbar({
+  settings,
+  discordUser,
+  oauthConfigured,
+  onDiscordLogout,
+  onToast,
+}) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
 
@@ -127,9 +133,68 @@ export function Navbar({ settings, onToast }) {
             className="bg-gradient-to-r from-nl-red to-nl-darkred hover:opacity-90 text-white text-xs md:text-sm font-bold px-4 sm:px-5 py-2.5 rounded-xl shadow-lg glow-red transition-all flex items-center gap-2"
           >
             <Play className="w-3.5 h-3.5 fill-current" />
-            <span className="hidden sm:inline">Jugar Ahora</span>
-            <span className="sm:hidden">Jugar</span>
+            <span className="hidden sm:inline">Jugar</span>
           </button>
+
+          {discordUser ? (
+            <div className="hidden sm:flex items-center gap-2 bg-nl-800 border border-gray-700/80 pl-2 pr-2.5 py-1 rounded-xl">
+              <img
+                src={discordUser.avatarUrl}
+                alt={discordUser.displayName}
+                className="w-7 h-7 rounded-lg object-cover border border-nl-red/40"
+              />
+              <div className="leading-tight">
+                <span className="text-xs font-bold text-white block max-w-[110px] truncate">
+                  {discordUser.displayName}
+                </span>
+                <span className="text-[10px] font-semibold text-nl-red block">
+                  {discordUser.isAdmin
+                    ? 'Admin'
+                    : discordUser.isStaff
+                    ? 'Staff'
+                    : discordUser.isVip
+                    ? 'VIP'
+                    : discordUser.isWhitelisted
+                    ? 'Whitelist'
+                    : 'Miembro'}
+                </span>
+              </div>
+              {(discordUser.isAdmin || discordUser.isStaff) && (
+                <Link
+                  to="/portal-nl-admin"
+                  className="p-1.5 rounded-lg bg-nl-red/15 text-nl-red hover:bg-nl-red hover:text-white transition-colors"
+                  title="Panel Administrativo"
+                >
+                  <Shield className="w-3.5 h-3.5" />
+                </Link>
+              )}
+              <button
+                onClick={onDiscordLogout}
+                className="p-1.5 rounded-lg text-gray-400 hover:text-red-400 transition-colors"
+                title="Cerrar sesión de Discord"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => {
+                if (!oauthConfigured) {
+                  onToast(
+                    'Discord OAuth2',
+                    'Configura DISCORD_CLIENT_ID y DISCORD_CLIENT_SECRET en Render/.env para activar el login.',
+                    'info'
+                  );
+                  return;
+                }
+                window.location.href = '/api/auth/discord';
+              }}
+              className="hidden sm:flex items-center gap-2 bg-[#5865F2] hover:bg-[#4752C4] text-white text-xs font-bold px-3.5 py-2.5 rounded-xl transition-all"
+            >
+              <LogIn className="w-3.5 h-3.5" />
+              Discord
+            </button>
+          )}
 
           <button
             onClick={() => setMobileOpen((v) => !v)}

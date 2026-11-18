@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 
-const SESSION_COOKIE = 'nl_admin_session';
+export const ADMIN_COOKIE = 'nl_admin_session';
+export const USER_COOKIE = 'nl_user_session';
 const TOKEN_TTL_MS = 1000 * 60 * 60 * 24 * 7; // 7 days
 
 function getSecret() {
@@ -71,33 +72,84 @@ export function parseCookies(cookieHeader = '') {
   return cookies;
 }
 
-export function requireAdmin(req, res, next) {
+export function getDiscordUserFromRequest(req) {
   const cookies = parseCookies(req.headers.cookie);
-  const token = cookies[SESSION_COOKIE];
-  const session = verifySessionToken(token);
-  if (!session) {
-    return res.status(401).json({ error: 'No autorizado. Inicia sesión como administrador.' });
-  }
-  req.admin = session;
-  next();
+  const token = cookies[USER_COOKIE];
+  return verifySessionToken(token);
 }
 
-export function setSessionCookie(res, token) {
+export function requireAdmin(req, res, next) {
+  const cookies = parseCookies(req.headers.cookie);
+
+  // 1. Check classic password admin session
+  const adminSession = verifySessionToken(cookies[ADMIN_COOKIE]);
+  if (adminSession) {
+    req.admin = adminSession;
+    return next();
+  }
+
+  // 2. Check Discord OAuth2 session with Admin role
+  const discordUser = verifySessionToken(cookies[USER_COOKIE]);
+  if (discordUser && discordUser.isAdmin) {
+    req.admin = {
+      id: discordUser.discordId,
+      username: discordUser.displayName || discordUser.username,
+      role: 'discord_admin',
+      discordId: discordUser.discordId,
+    };
+    return next();
+  }
+
+  return res.status(401).json({
+    error: 'No autorizado. Inicia sesión como administrador o con tu rol Admin de Discord.',
+  });
+}
+
+export function requireStaffOrAdmin(req, res, next) {
+  const cookies = parseCookies(req.headers.cookie);
+  const adminSession = verifySessionToken(cookies[ADMIN_COOKIE]);
+  if (adminSession) {
+    req.admin = adminSession;
+    return next();
+  }
+
+  const discordUser = verifySessionToken(cookies[USER_COOKIE]);
+  if (discordUser && (discordUser.isAdmin || discordUser.isStaff)) {
+    req.admin = {
+      id: discordUser.discordId,
+      username: discordUser.displayName || discordUser.username,
+      role: discordUser.isAdmin ? 'discord_admin' : 'discord_staff',
+      discordId: discordUser.discordId,
+    };
+    return next();
+  }
+
+  return res.status(401).json({
+    error: 'Acceso restringido a Staff o Administradores.',
+  });
+}
+
+export function setCookie(res, name, value, maxAgeMs = TOKEN_TTL_MS) {
   const isProd = process.env.NODE_ENV === 'production';
   const parts = [
-    `${SESSION_COOKIE}=${encodeURIComponent(token)}`,
+    `${name}=${encodeURIComponent(value)}`,
     'HttpOnly',
     'Path=/',
     'SameSite=Lax',
-    `Max-Age=${Math.floor(TOKEN_TTL_MS / 1000)}`,
+    `Max-Age=${Math.floor(maxAgeMs / 1000)}`,
   ];
   if (isProd) parts.push('Secure');
-  res.setHeader('Set-Cookie', parts.join('; '));
+  res.append('Set-Cookie', parts.join('; '));
+}
+
+export function clearCookie(res, name) {
+  res.append('Set-Cookie', `${name}=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0`);
+}
+
+export function setSessionCookie(res, token) {
+  setCookie(res, ADMIN_COOKIE, token);
 }
 
 export function clearSessionCookie(res) {
-  res.setHeader(
-    'Set-Cookie',
-    `${SESSION_COOKIE}=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0`
-  );
+  clearCookie(res, ADMIN_COOKIE);
 }

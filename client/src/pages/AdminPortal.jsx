@@ -31,7 +31,7 @@ const TABS = [
   { id: 'settings', label: 'Configuración', icon: Settings },
 ];
 
-export function AdminPortal({ onToast, onSiteRefresh }) {
+export function AdminPortal({ discordUser, onToast, onSiteRefresh }) {
   const [authChecked, setAuthChecked] = useState(false);
   const [user, setUser] = useState(null);
   const [loginForm, setLoginForm] = useState({ username: '', password: '' });
@@ -157,6 +157,19 @@ export function AdminPortal({ onToast, onSiteRefresh }) {
             </button>
           </form>
 
+          <div className="relative flex py-1 items-center">
+            <div className="flex-grow border-t border-gray-800" />
+            <span className="flex-shrink mx-3 text-[11px] text-gray-500 uppercase">o</span>
+            <div className="flex-grow border-t border-gray-800" />
+          </div>
+
+          <a
+            href="/api/auth/discord"
+            className="w-full bg-[#5865F2] hover:bg-[#4752C4] text-white font-bold py-3 rounded-xl transition-all text-sm flex items-center justify-center gap-2"
+          >
+            Entrar con Discord (Rol Admin/Staff)
+          </a>
+
           <div className="text-center">
             <Link
               to="/"
@@ -169,6 +182,11 @@ export function AdminPortal({ onToast, onSiteRefresh }) {
       </div>
     );
   }
+
+  const visibleTabs =
+    user?.role === 'discord_staff'
+      ? TABS.filter((t) => t.id === 'overview' || t.id === 'whitelist')
+      : TABS;
 
   return (
     <div className="min-h-screen bg-nl-900 text-gray-100 flex flex-col">
@@ -207,7 +225,7 @@ export function AdminPortal({ onToast, onSiteRefresh }) {
       <div className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Sidebar Tabs */}
         <aside className="lg:col-span-3 space-y-1.5">
-          {TABS.map((t) => {
+          {visibleTabs.map((t) => {
             const Icon = t.icon;
             const active = tab === t.id;
             const pendingCount =
@@ -1184,7 +1202,7 @@ function SettingsManager({ settings, onRefresh, onToast }) {
           </div>
           <div>
             <label className="block text-gray-400 mb-1">
-              Discord Webhook URL para alertas de Whitelist (Opcional, privado)
+              Discord Webhook URL para Whitelist (Solicitudes y Resultados)
             </label>
             <input
               type="url"
@@ -1193,6 +1211,80 @@ function SettingsManager({ settings, onRefresh, onToast }) {
               onChange={(e) => setForm({ ...form, discordWebhookUrl: e.target.value })}
               className="w-full bg-nl-900 border border-gray-700 rounded-xl px-3 py-2 text-white font-mono"
             />
+          </div>
+          <div>
+            <label className="block text-gray-400 mb-1">
+              Discord Webhook URL para Noticias & Parches (Publicación automática)
+            </label>
+            <input
+              type="url"
+              placeholder="https://discord.com/api/webhooks/..."
+              value={form.discordNewsWebhookUrl || ''}
+              onChange={(e) =>
+                setForm({ ...form, discordNewsWebhookUrl: e.target.value })
+              }
+              className="w-full bg-nl-900 border border-gray-700 rounded-xl px-3 py-2 text-white font-mono"
+            />
+          </div>
+
+          <div className="border-t border-gray-800 pt-4">
+            <h3 className="text-sm font-bold text-white mb-3">
+              Permisos por Roles de Discord (IDs separados por coma)
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-gray-400 mb-1">
+                  ID Rol Admin (Acceso total al panel)
+                </label>
+                <input
+                  placeholder="ej. 123456789012345678"
+                  value={form.discordAdminRoleIds || ''}
+                  onChange={(e) =>
+                    setForm({ ...form, discordAdminRoleIds: e.target.value })
+                  }
+                  className="w-full bg-nl-900 border border-gray-700 rounded-xl px-3 py-2 text-white font-mono"
+                />
+              </div>
+              <div>
+                <label className="block text-gray-400 mb-1">
+                  ID Rol Staff (Revisar Whitelist)
+                </label>
+                <input
+                  placeholder="ej. 123456789012345678"
+                  value={form.discordStaffRoleIds || ''}
+                  onChange={(e) =>
+                    setForm({ ...form, discordStaffRoleIds: e.target.value })
+                  }
+                  className="w-full bg-nl-900 border border-gray-700 rounded-xl px-3 py-2 text-white font-mono"
+                />
+              </div>
+              <div>
+                <label className="block text-gray-400 mb-1">
+                  ID Rol VIP (Insignia VIP en la web)
+                </label>
+                <input
+                  placeholder="ej. 123456789012345678"
+                  value={form.discordVipRoleIds || ''}
+                  onChange={(e) =>
+                    setForm({ ...form, discordVipRoleIds: e.target.value })
+                  }
+                  className="w-full bg-nl-900 border border-gray-700 rounded-xl px-3 py-2 text-white font-mono"
+                />
+              </div>
+              <div>
+                <label className="block text-gray-400 mb-1">
+                  ID Rol Whitelist (Se asigna al aprobar)
+                </label>
+                <input
+                  placeholder="ej. 123456789012345678"
+                  value={form.discordWhitelistRoleIds || ''}
+                  onChange={(e) =>
+                    setForm({ ...form, discordWhitelistRoleIds: e.target.value })
+                  }
+                  className="w-full bg-nl-900 border border-gray-700 rounded-xl px-3 py-2 text-white font-mono"
+                />
+              </div>
+            </div>
           </div>
         </div>
 

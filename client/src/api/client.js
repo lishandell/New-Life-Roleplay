@@ -16,8 +16,11 @@ async function request(url, options = {}) {
 }
 
 export const api = {
-  // Public
+  // Public & Discord Auth
   getSiteData: () => request('/api/site-data'),
+  getDiscordMe: () => request('/api/auth/me'),
+  logoutDiscord: () => request('/api/auth/logout', { method: 'POST' }),
+  getMyWhitelistApps: () => request('/api/whitelist/my-applications'),
   submitWhitelist: (payload) =>
     request('/api/whitelist', {
       method: 'POST',

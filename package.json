@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=22.13.0"
+  },
   "description": "Plataforma web oficial y panel administrativo para New Life Roleplay MTA:SA",
   "scripts": {
     "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
