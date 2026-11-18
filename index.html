@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New Life Roleplay - Portal Oficial</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-copper: #d98d75;
+            --light-copper: #e39c84;
+            --dark-copper: #b35d49;
+            --bg-dark: #0a0a0a;
+            --bg-card: #141414;
+            --bg-card-hover: #1f1f1f;
+            --text-main: #ffffff;
+            --text-muted: #a0a0a0;
+            --border-color: rgba(217, 141, 117, 0.2);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Montserrat', sans-serif;
+            scroll-behavior: smooth;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            overflow-x: hidden;
+        }
+
+        /* HEADER / NAV */
+        header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background: rgba(10, 10, 10, 0.9);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border-color);
+            z-index: 1000;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 5%;
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-container img {
+            height: 45px;
+            object-fit: contain;
+        }
+
+        .logo-container span {
+            font-size: 1.2rem;
+            font-weight: 900;
+            letter-spacing: 1px;
+            background: linear-gradient(135deg, #fff, var(--primary-copper));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        nav ul {
+            display: flex;
+            list-style: none;
+            gap: 30px;
+        }
+
+        nav ul li a {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.95rem;
+            transition: 0.3s ease;
+        }
+
+        nav ul li a:hover, nav ul li a.active {
+            color: var(--primary-copper);
+            text-shadow: 0 0 10px rgba(217, 141, 117, 0.4);
+        }
+
+        .nav-actions {
+            display: flex;
+            gap: 15px;
+        }
+
+        .btn-ip {
+            background: linear-gradient(135deg, var(--primary-copper), var(--dark-copper));
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 15px rgba(217, 141, 117, 0.3);
+        }
+
+        .btn-ip:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(217, 141, 117, 0.5);
+        }
+
+        /* HERO SECTION */
+        hero {
+            padding: 160px 5% 80px;
+            min-height: 90vh;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: radial-gradient(circle at 70% 30%, rgba(217, 141, 117, 0.08) 0%, transparent 60%);
+        }
+
+        .hero-content {
+            max-width: 600px;
+        }
+
+        .hero-badge {
+            background: rgba(217, 141, 117, 0.1);
+            color: var(--primary-copper);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            border: 1px solid var(--border-color);
+            display: inline-block;
+            margin-bottom: 20px;
+        }
+
+        .hero-content h1 {
+            font-size: 3.5rem;
+            font-weight: 900;
+            line-height: 1.1;
+            margin-bottom: 20px;
+        }
+
+        .hero-content h1 span {
+            color: var(--primary-copper);
+        }
+
+        .hero-content p {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+            line-height: 1.6;
+            margin-bottom: 30px;
+        }
+
+        .server-status-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            padding: 30px;
+            border-radius: 16px;
+            width: 380px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        .status-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            padding-bottom: 15px;
+        }
+
+        .online-dot {
+            width: 10px;
+            height: 10px;
+            background-color: #2ecc71;
+            border-radius: 50%;
+            box-shadow: 0 0 10px #2ecc71;
+            display: inline-block;
+            margin-right: 6px;
+        }
+
+        .status-info {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+
+        .info-row span:last-child {
+            color: white;
+            font-weight: 600;
+        }
+
+        /* SECTIONS GENERAL */
+        section {
+            padding: 100px 5%;
+        }
+
+        .section-title {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .section-title h2 {
+            font-size: 2.5rem;
+            font-weight: 900;
+            margin-bottom: 10px;
+        }
+
+        .section-title p {
+            color: var(--text-muted);
+        }
+
+        /* NOTICIAS & ACTUALIZACIONES GRID */
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 30px;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            overflow: hidden;
+            transition: 0.3s;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            border-color: var(--primary-copper);
+            box-shadow: 0 10px 30px rgba(217, 141, 117, 0.15);
+        }
+
+        .card-body {
+            padding: 25px;
+        }
+
+        .tag {
+            background: rgba(217, 141, 117, 0.15);
+            color: var(--primary-copper);
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .card-body h3 {
+            font-size: 1.3rem;
+            margin: 15px 0 10px;
+        }
+
+        .card-body p {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+
+        /* BOTS SECTION */
+        .bots-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+        }
+
+        .bot-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            padding: 30px;
+            border-radius: 12px;
+            text-align: center;
+            transition: 0.3s;
+        }
+
+        .bot-card:hover {
+            border-color: var(--primary-copper);
+        }
+
+        .bot-icon {
+            font-size: 2.5rem;
+            color: var(--primary-copper);
+            margin-bottom: 20px;
+        }
+
+        /* FOOTER */
+        footer {
+            background: #050505;
+            border-top: 1px solid var(--border-color);
+            padding: 40px 5%;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        footer span {
+            color: var(--primary-copper);
+            font-weight: 700;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- HEADER -->
+    <header>
+        <div class="logo-container">
+            <!-- Referencia al logo proporcionado -->
+            <img src="logo.png" alt="New Life Roleplay Logo">
+            <span>NEW LIFE RP</span>
+        </div>
+        <nav>
+            <ul>
+                <li><a href="#inicio" class="active">Inicio</a></li>
+                <li><a href="#noticias">Noticias</a></li>
+                <li><a href="#actualizaciones">Actualizaciones</a></li>
+                <li><a href="#bots">Bots del Servidor</a></li>
+            </ul>
+        </nav>
+        <div class="nav-actions">
+            <button class="btn-ip" onclick="copyIP()">
+                <i class="fas fa-copy"></i> Copiar IP: 172.96.140.62:7323
+            </button>
+        </div>
+    </header>
+
+    <!-- HERO -->
+    <hero id="inicio">
+        <div class="hero-content">
+            <div class="hero-badge">SERVIDOR OFICIAL MTA:SA</div>
+            <h1>Vive tu propia historia en <span>New Life Roleplay</span></h1>
+            <p>El servidor de rol definitivo. Economía real, facciones activas, sistemas exclusivos y la mejor comunidad hispanohablante te esperan.</p>
+            <button class="btn-ip" style="padding: 14px 28px; font-size: 1rem;" onclick="copyIP()">
+                <i class="fas fa-play"></i> ¡Conectarse Ahora!
+            </button>
+        </div>
+
+        <div class="server-status-card">
+            <div class="status-header">
+                <h3>Estado del Servidor</h3>
+                <span><span class="online-dot"></span>En Línea</span>
+            </div>
+            <div class="status-info">
+                <div class="info-row">
+                    <span>IP Directa:</span>
+                    <span>172.96.140.62:7323</span>
+                </div>
+                <div class="info-row">
+                    <span>Jugadores:</span>
+                    <span id="player-count">84 / 150</span>
+                </div>
+                <div class="info-row">
+                    <span>Modo de Juego:</span>
+                    <span>Spanish Roleplay</span>
+                </div>
+                <div class="info-row">
+                    <span>Ping Promedio:</span>
+                    <span>32 ms</span>
+                </div>
+            </div>
+        </div>
+    </hero>
+
+    <!-- NOTICIAS -->
+    <section id="noticias">
+        <div class="section-title">
+            <h2>Últimas Noticias</h2>
+            <p>Entérate de los eventos y avisos importantes de la comunidad</p>
+        </div>
+        <div class="grid-3">
+            <div class="card">
+                <div class="card-body">
+                    <span class="tag">Evento</span>
+                    <h3>Torneo de picadas clandestinas</h3>
+                    <p>Participa este fin de semana en las carreras ilegales organizadas por las bandas del bajo mundo. ¡Grandes premios en efectivo!</p>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-body">
+                    <span class="tag">Comunidad</span>
+                    <h3>Apertura de Postulaciones</h3>
+                    <p>¿Quieres formar parte de la Policía Nacional o del equipo de EMS? Las convocatorias ya se encuentran abiertas en nuestro Discord.</p>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-body">
+                    <span class="tag">Importante</span>
+                    <h3>Mantenimiento general programado</h3>
+                    <p>Realizaremos mejoras en el rendimiento del backend y optimización de texturas para garantizar 0 lag en las zonas de rol intenso.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ACTUALIZACIONES -->
+    <section id="actualizaciones" style="background: rgba(20,20,20,0.5);">
+        <div class="section-title">
+            <h2>Notas de Actualización</h2>
+            <p>Los cambios más recientes implementados por el equipo de desarrollo</p>
+        </div>
+        <div class="grid-3">
+            <div class="card">
+                <div class="card-body">
+                    <span class="tag">Update v1.4</span>
+                    <h3>Nuevo sistema de Garajes y Tuning</h3>
+                    <p>Se añadieron nuevas piezas estéticas exclusivas, guardado automático de posición y mejor control de físicas en vehículos importados.</p>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-body">
+                    <span class="tag">Update v1.35</span>
+                    <h3>Interfaz Bancaria y Cajeros</h3>
+                    <p>Renovación total de la UI de bancos y tarjetas de crédito con diseño moderno y transacciones seguras en tiempo real.</p>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-body">
+                    <span class="tag">Parche Rápido</span>
+                    <h3>Optimizaciones de HUD y GPS</h3>
+                    <p>Corrección de bugs menores en el mapa de navegación y optimización de FPS para computadoras de gama baja y media.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- BOTS -->
+    <section id="bots">
+        <div class="section-title">
+            <h2>Sistema de Bots Inteligentes</h2>
+            <p>Herramientas automatizadas integradas para mantener la seguridad y actividad</p>
+        </div>
+        <div class="bots-container">
+            <div class="bot-card">
+                <div class="bot-icon"><i class="fas fa-shield-alt"></i></div>
+                <h3>NewLife Guard (Anti-Cheat)</h3>
+                <p>Bot de seguridad avanzado encargado de detectar modificaciones ilegales y proteger la economía del servidor 24/7.</p>
+            </div>
+            <div class="bot-card">
+                <div class="bot-icon"><i class="fas fa-headset"></i></div>
+                <h3>Support Bot</h3>
+                <p>Asistente virtual en Discord y plataforma web para resolver dudas frecuentes de los usuarios y gestionar tickets de ayuda.</p>
+            </div>
+            <div class="bot-card">
+                <div class="bot-icon"><i class="fas fa-chart-line"></i></div>
+                <h3>Status Sync Bot</h3>
+                <p>Sincroniza en tiempo real el conteo de jugadores conectados, estado de la red y reportes directamente con el servidor.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer>
+        <p>&copy; 2026 <span>New Life Roleplay</span>. Todos los derechos reservados. Desarrollado para MTA:SA (IP: 172.96.140.62:7323).</p>
+    </footer>
+
+    <script>
+        function copyIP() {
+            const ip = "172.96.140.62:7323";
+            navigator.clipboard.writeText(ip).then(() => {
+                alert("¡IP copiada al portapapeles: " + ip + "!");
+            }).catch(err => {
+                console.error('Error al copiar: ', err);
+            });
+        }
+    </script>
+</body>
+</html>

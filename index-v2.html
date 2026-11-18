@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New Life Roleplay - MTA:SA Servidor Oficial</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        nl: {
+                            900: '#07080c',
+                            800: '#0f1017',
+                            700: '#171924',
+                            600: '#232636',
+                            red: '#d98d75',       /* Color cobre / rosado metálico del logo */
+                            redglow: '#e39c84',   /* Brillo cobrizo claro */
+                            darkred: '#b35d49'    /* Tono cobrizo oscuro */
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome para iconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #07080c;
+            color: #f3f4f6;
+            overflow-x: hidden;
+        }
+        .glow-red {
+            box-shadow: 0 0 30px rgba(217, 141, 117, 0.35);
+        }
+        .glow-red-sm {
+            box-shadow: 0 0 12px rgba(217, 141, 117, 0.3);
+        }
+        .text-glow {
+            text-shadow: 0 0 15px rgba(217, 141, 117, 0.5);
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #07080c;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #232636;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #d98d75;
+        }
+        .glass-card {
+            background: rgba(15, 16, 23, 0.75);
+            backdrop-filter: blur(14px);
+            border: 1px solid rgba(217, 141, 117, 0.15);
+        }
+        .glass-card:hover {
+            border-color: rgba(217, 141, 117, 0.4);
+        }
+    </style>
+</head>
+<body class="bg-nl-900 text-gray-100 min-h-screen flex flex-col selection:bg-nl-red selection:text-white">
+
+    <!-- Notificación Toast flotante -->
+    <div id="toast" class="fixed bottom-6 right-6 z-50 transform translate-y-32 opacity-0 transition-all duration-300 flex items-center gap-3 bg-nl-800 border border-nl-red text-white px-5 py-3 rounded-2xl shadow-2xl glow-red-sm">
+        <i id="toast-icon" class="fa-solid fa-circle-check text-nl-red text-xl"></i>
+        <div>
+            <h4 id="toast-title" class="font-bold text-sm">Éxito</h4>
+            <p id="toast-msg" class="text-xs text-gray-400">Acción realizada correctamente.</p>
+        </div>
+    </div>
+
+    <!-- Navegación Superior -->
+    <header class="sticky top-0 z-40 bg-nl-900/90 backdrop-blur-xl border-b border-gray-800/80 px-6 py-3">
+        <div class="max-w-7xl mx-auto flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-11 h-11 rounded-xl bg-nl-800 border border-nl-red/40 flex items-center justify-center p-1 glow-red-sm">
+                    <img src="logo.png" alt="New Life Logo" class="w-full h-full object-contain" onerror="this.src='https://placehold.co/50x50/171924/d98d75?text=NL'">
+                </div>
+                <div>
+                    <h1 class="font-extrabold text-white tracking-wider text-sm md:text-base uppercase">NEW LIFE <span class="text-nl-red">ROLEPLAY</span></h1>
+                    <span class="text-[10px] text-gray-400 font-semibold tracking-widest uppercase">MTA:SA Hardcore</span>
+                </div>
+            </div>
+
+            <!-- Menú Desktop -->
+            <nav class="hidden md:flex items-center gap-8 text-sm font-semibold text-gray-300">
+                <a href="#hero" class="hover:text-nl-red transition-colors">Inicio</a>
+                <a href="#news" class="hover:text-nl-red transition-colors">Noticias</a>
+                <a href="#features" class="hover:text-nl-red transition-colors">Características</a>
+                <a href="#bots" class="hover:text-nl-red transition-colors">Bots & Discord</a>
+                <a href="#staff" class="hover:text-nl-red transition-colors">Staff</a>
+            </nav>
+
+            <!-- IP Badge y Botón Conectar -->
+            <div class="flex items-center gap-3">
+                <div class="hidden sm:flex items-center gap-2 bg-nl-800 border border-gray-700/60 px-3 py-1.5 rounded-xl">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+                    <span class="text-xs font-mono text-gray-300 select-all">mta.newliferp.es:22003</span>
+                    <button onclick="copyIP()" class="text-gray-400 hover:text-white text-xs ml-1 bg-nl-700 px-2 py-0.5 rounded transition-colors" title="Copiar IP">
+                        <i class="fa-regular fa-copy"></i>
+                    </button>
+                </div>
+                <button onclick="showToast('MTA:SA', 'Lanzando juego mediante protocolo mta://', 'success')" class="bg-gradient-to-r from-nl-red to-nl-darkred hover:opacity-90 text-white text-xs md:text-sm font-bold px-5 py-2.5 rounded-xl shadow-lg glow-red transition-all flex items-center gap-2">
+                    <i class="fa-solid fa-play"></i> Jugar Ahora
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Contenido Principal -->
+    <main class="flex-1 space-y-20 pb-20">
+
+        <!-- 1. HERO SECTION -->
+        <section id="hero" class="relative pt-12 pb-20 px-6 overflow-hidden">
+            <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-nl-red/10 via-nl-900/40 to-nl-900 pointer-events-none"></div>
+            
+            <div class="max-w-5xl mx-auto text-center space-y-8 relative z-10">
+                <!-- Logotipo Oficial Grande en el Hero -->
+                <div class="flex justify-center mb-2">
+                    <div class="w-48 sm:w-60 md:w-72 drop-shadow-[0_0_35px_rgba(217,141,117,0.4)]">
+                        <img src="logo.png" alt="New Life Roleplay Logo" class="w-full h-auto object-contain animate-pulse" onerror="this.src='https://placehold.co/300x200/171924/d98d75?text=NEW+LIFE+RP'">
+                    </div>
+                </div>
+
+                <div class="inline-flex items-center gap-2 bg-nl-800/80 border border-nl-red/40 px-4 py-2 rounded-full text-xs font-semibold text-gray-300 glow-red-sm">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                    <span>Servidor Activo • <strong class="text-white">468 / 500</strong> Jugadores en línea</span>
+                </div>
+
+                <h1 class="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight text-white uppercase">
+                    Vive tu <span class="text-nl-red text-glow">Nueva Vida</span> sin Reglas Absurdas
+                </h1>
+
+                <p class="text-base sm:text-lg text-gray-400 max-w-2xl mx-auto">
+                    El servidor de MTA:SA Roleplay definitivo con economía avanzada, facciones legales e ilegales activas, garajes personalizados y soporte 24/7 mediante nuestros bots inteligentes.
+                </p>
+
+                <!-- Botones de Acción Hero -->
+                <div class="flex flex-wrap justify-center gap-4 pt-2">
+                    <button onclick="copyIP()" class="bg-nl-800 hover:bg-nl-700 border border-gray-700 text-white font-bold px-6 py-3.5 rounded-2xl transition-all text-sm flex items-center gap-3 group">
+                        <i class="fa-solid fa-server text-nl-red group-hover:scale-110 transition-transform"></i> Copiar IP: mta.newliferp.es
+                    </button>
+                    <a href="https://discord.com" target="_blank" rel="noopener noreferrer" class="bg-[#5865F2] hover:bg-[#4752C4] text-white font-bold px-6 py-3.5 rounded-2xl transition-all text-sm flex items-center gap-3 shadow-lg shadow-[#5865F2]/20">
+                        <i class="fa-brands fa-discord"></i> Unirse al Discord Oficial
+                    </a>
+                </div>
+
+                <!-- Estadísticas rápidas destacadas -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 pt-8">
+                    <div class="glass-card p-4 rounded-2xl text-center">
+                        <h4 class="text-2xl md:text-3xl font-extrabold text-white">0.3s</h4>
+                        <p class="text-xs text-gray-400 mt-1">Latencia Optimizada</p>
+                    </div>
+                    <div class="glass-card p-4 rounded-2xl text-center">
+                        <h4 class="text-2xl md:text-3xl font-extrabold text-nl-red">100%</h4>
+                        <p class="text-xs text-gray-400 mt-1">Anti-Cheat Seguro</p>
+                    </div>
+                    <div class="glass-card p-4 rounded-2xl text-center">
+                        <h4 class="text-2xl md:text-3xl font-extrabold text-amber-400">+15</h4>
+                        <p class="text-xs text-gray-400 mt-1">Facciones Activas</p>
+                    </div>
+                    <div class="glass-card p-4 rounded-2xl text-center">
+                        <h4 class="text-2xl md:text-3xl font-extrabold text-emerald-400">24/7</h4>
+                        <p class="text-xs text-gray-400 mt-1">Soporte Automatizado</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 2. SECCIÓN DE NOTICIAS & ACTUALIZACIONES -->
+        <section id="news" class="max-w-7xl mx-auto px-6 space-y-8">
+            <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-gray-800 pb-4">
+                <div>
+                    <span class="text-nl-red text-xs font-bold tracking-widest uppercase">Actualizaciones de Contenido</span>
+                    <h2 class="text-2xl md:text-3xl font-black text-white mt-1">Últimas Noticias y Changelogs</h2>
+                </div>
+                <!-- Filtros de pestañas para noticias -->
+                <div class="flex items-center gap-2 bg-nl-800 p-1 rounded-xl border border-gray-800 text-xs font-semibold">
+                    <button onclick="filterNews('all')" id="btn-all" class="px-4 py-2 rounded-lg bg-nl-red text-white transition-all">Todos</button>
+                    <button onclick="filterNews('update')" id="btn-update" class="px-4 py-2 rounded-lg text-gray-400 hover:text-white transition-all">Parches</button>
+                    <button onclick="filterNews('event')" id="btn-event" class="px-4 py-2 rounded-lg text-gray-400 hover:text-white transition-all">Eventos</button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Noticia 1 -->
+                <div class="news-card glass-card rounded-2xl overflow-hidden flex flex-col justify-between group" data-category="update">
+                    <div class="h-48 bg-gradient-to-br from-nl-700 to-nl-800 relative flex items-center justify-center overflow-hidden">
+                        <div class="absolute inset-0 bg-black/40"></div>
+                        <i class="fa-solid fa-rocket text-6xl text-nl-red group-hover:scale-110 transition-transform duration-300"></i>
+                        <span class="absolute top-3 left-3 bg-nl-red text-white text-[10px] font-extrabold px-3 py-1 rounded-full uppercase tracking-wider">Parche v3.8</span>
+                        <span class="absolute bottom-3 right-3 bg-nl-900/80 text-gray-300 text-xs px-2.5 py-1 rounded-lg">15 Jun 2026</span>
+                    </div>
+                    <div class="p-6 space-y-4 flex-1 flex flex-col justify-between">
+                        <div class="space-y-2">
+                            <h3 class="text-lg font-bold text-white group-hover:text-nl-red transition-colors">Actualización Verano 2026: Nuevos Garajes & Tuning</h3>
+                            <p class="text-xs text-gray-400 leading-relaxed">Hemos añadido más de 40 nuevos vehículos personalizables, sistema de compra de garajes independientes y rebalanceo de trabajos legales.</p>
+                        </div>
+                        <button onclick="showToast('Noticia', 'Abriendo detalles completos del parche...', 'info')" class="text-xs font-bold text-nl-red hover:underline flex items-center gap-2">
+                            Leer notas completas <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Noticia 2 -->
+                <div class="news-card glass-card rounded-2xl overflow-hidden flex flex-col justify-between group" data-category="event">
+                    <div class="h-48 bg-gradient-to-br from-nl-700 to-nl-800 relative flex items-center justify-center overflow-hidden">
+                        <div class="absolute inset-0 bg-black/40"></div>
+                        <i class="fa-solid fa-trophy text-6xl text-amber-400 group-hover:scale-110 transition-transform duration-300"></i>
+                        <span class="absolute top-3 left-3 bg-amber-500 text-white text-[10px] font-extrabold px-3 py-1 rounded-full uppercase tracking-wider">Evento Global</span>
+                        <span class="absolute bottom-3 right-3 bg-nl-900/80 text-gray-300 text-xs px-2.5 py-1 rounded-lg">10 Jun 2026</span>
+                    </div>
+                    <div class="p-6 space-y-4 flex-1 flex flex-col justify-between">
+                        <div class="space-y-2">
+                            <h3 class="text-lg font-bold text-white group-hover:text-nl-red transition-colors">Gran Evento de Carreras Clandestinas en Las Venturas</h3>
+                            <p class="text-xs text-gray-400 leading-relaxed">Participa por $2,000,000 en premios in-game y coches exclusivos. Inscripciones abiertas en el canal de discord oficial.</p>
+                        </div>
+                        <button onclick="showToast('Noticia', 'Abriendo detalles completos del evento...', 'info')" class="text-xs font-bold text-nl-red hover:underline flex items-center gap-2">
+                            Leer notas completas <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Noticia 3 -->
+                <div class="news-card glass-card rounded-2xl overflow-hidden flex flex-col justify-between group" data-category="update">
+                    <div class="h-48 bg-gradient-to-br from-nl-700 to-nl-800 relative flex items-center justify-center overflow-hidden">
+                        <div class="absolute inset-0 bg-black/40"></div>
+                        <i class="fa-solid fa-shield-halved text-6xl text-emerald-400 group-hover:scale-110 transition-transform duration-300"></i>
+                        <span class="absolute top-3 left-3 bg-emerald-500 text-white text-[10px] font-extrabold px-3 py-1 rounded-full uppercase tracking-wider">Seguridad</span>
+                        <span class="absolute bottom-3 right-3 bg-nl-900/80 text-gray-300 text-xs px-2.5 py-1 rounded-lg">02 Jun 2026</span>
+                    </div>
+                    <div class="p-6 space-y-4 flex-1 flex flex-col justify-between">
+                        <div class="space-y-2">
+                            <h3 class="text-lg font-bold text-white group-hover:text-nl-red transition-colors">Mejoras en el Sistema Anti-Cheat y Verificación 2FA</h3>
+                            <p class="text-xs text-gray-400 leading-relaxed">Implementación de escáner avanzado en tiempo real para garantizar una experiencia de juego limpia, justa y libre de hackers.</p>
+                        </div>
+                        <button onclick="showToast('Noticia', 'Abriendo detalles completos de seguridad...', 'info')" class="text-xs font-bold text-nl-red hover:underline flex items-center gap-2">
+                            Leer notas completas <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. SECCIÓN DE CARACTERÍSTICAS / INFO DEL SERVIDOR -->
+        <section id="features" class="max-w-7xl mx-auto px-6 space-y-12">
+            <div class="text-center max-w-2xl mx-auto space-y-3">
+                <span class="text-nl-red text-xs font-bold tracking-widest uppercase">Mecánicas Únicas</span>
+                <h2 class="text-2xl md:text-3xl font-black text-white">¿Por qué elegir New Life Roleplay?</h2>
+                <p class="text-xs text-gray-400">Diseñado desde cero para ofrecer una experiencia inmersiva, optimizada y sin tiempos de carga molestos.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <!-- Característica 1 -->
+                <div class="glass-card p-6 rounded-2xl space-y-4 transition-all duration-300 hover:-translate-y-1">
+                    <div class="w-12 h-12 rounded-xl bg-nl-red/10 text-nl-red flex items-center justify-center text-xl font-bold border border-nl-red/20">
+                        <i class="fa-solid fa-car-rear"></i>
+                    </div>
+                    <h3 class="text-base font-bold text-white">Garajes & Tuning Avanzado</h3>
+                    <p class="text-xs text-gray-400 leading-relaxed">Guarda tus vehículos en propiedades privadas, modifica cada componente estético y mecánico con piezas exclusivas.</p>
+                </div>
+
+                <!-- Característica 2 -->
+                <div class="glass-card p-6 rounded-2xl space-y-4 transition-all duration-300 hover:-translate-y-1">
+                    <div class="w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center text-xl font-bold border border-emerald-500/20">
+                        <i class="fa-solid fa-vault"></i>
+                    </div>
+                    <h3 class="text-base font-bold text-white">Economía Realista</h3>
+                    <p class="text-xs text-gray-400 leading-relaxed">Sistema bancario con préstamos, inversiones empresariales, cajeros automáticos interactivos y salarios por hora.</p>
+                </div>
+
+                <!-- Característica 3 -->
+                <div class="glass-card p-6 rounded-2xl space-y-4 transition-all duration-300 hover:-translate-y-1">
+                    <div class="w-12 h-12 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center text-xl font-bold border border-blue-500/20">
+                        <i class="fa-solid fa-masks-theater"></i>
+                    </div>
+                    <h3 class="text-base font-bold text-white">Facciones & Bandas</h3>
+                    <p class="text-xs text-gray-400 leading-relaxed">LSPD, FBI, EMS y poderosas mafias ilegales luchan por el control territorial de Los Santos y San Fierro.</p>
+                </div>
+
+                <!-- Característica 4 -->
+                <div class="glass-card p-6 rounded-2xl space-y-4 transition-all duration-300 hover:-translate-y-1">
+                    <div class="w-12 h-12 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center text-xl font-bold border border-amber-500/20">
+                        <i class="fa-solid fa-headset"></i>
+                    </div>
+                    <h3 class="text-base font-bold text-white">Soporte In-Game & Bots</h3>
+                    <p class="text-xs text-gray-400 leading-relaxed">Sistema de reportes integrado y bots automatizados en Discord para reportes, sanciones y verificación instantánea.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 4. SECCIÓN INTERACTIVA DE BOTS & DISCORD -->
+        <section id="bots" class="max-w-7xl mx-auto px-6">
+            <div class="glass-card rounded-3xl p-8 md:p-12 border border-nl-red/30 grid grid-cols-1 lg:grid-cols-2 gap-10 items-center glow-red-sm">
+                <div class="space-y-6">
+                    <span class="bg-[#5865F2]/20 text-[#5865F2] text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">Integración Discord Bot</span>
+                    <h2 class="text-2xl md:text-4xl font-extrabold text-white">Bots Inteligentes para tu Control Total</h2>
+                    <p class="text-xs sm:text-sm text-gray-300 leading-relaxed">
+                        Nuestro bot oficial en Discord sincroniza automáticamente tu cuenta de juego con tus roles, te permite verificar tu serial, consultar saldo bancario, reportar bugs y ver el estado en vivo del servidor sin abrir el juego.
+                    </p>
+                    <div class="space-y-3">
+                        <div class="flex items-center gap-3 text-xs text-gray-300">
+                            <i class="fa-solid fa-circle-check text-nl-red"></i> Verificación automática de cuentas y roles VIP.
+                        </div>
+                        <div class="flex items-center gap-3 text-xs text-gray-300">
+                            <i class="fa-solid fa-circle-check text-nl-red"></i> Alertas en tiempo real de caídas y reinicios.
+                        </div>
+                        <div class="flex items-center gap-3 text-xs text-gray-300">
+                            <i class="fa-solid fa-circle-check text-nl-red"></i> Sistema de tickets de soporte técnico 24/7.
+                        </div>
+                    </div>
+                    <div class="pt-2">
+                        <button onclick="showToast('Bots', 'Redirigiendo al bot de Discord...', 'success')" class="bg-[#5865F2] hover:bg-[#4752C4] text-white text-xs font-bold px-6 py-3 rounded-xl transition-all shadow-lg shadow-[#5865F2]/20 flex items-center gap-2">
+                            <i class="fa-brands fa-discord text-base"></i> Invitar Bot / Ver Comandos
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Consola Interactiva Simulada de Discord Bot -->
+                <div class="bg-nl-900 border border-gray-800 rounded-2xl p-5 shadow-2xl font-mono text-xs space-y-4">
+                    <div class="flex items-center justify-between border-b border-gray-800 pb-3">
+                        <div class="flex items-center gap-2">
+                            <span class="w-3 h-3 rounded-full bg-red-500 inline-block"></span>
+                            <span class="w-3 h-3 rounded-full bg-amber-500 inline-block"></span>
+                            <span class="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span>
+                            <span class="text-gray-400 ml-2 font-sans text-xs font-semibold">#nl-bot-commands</span>
+                        </div>
+                        <span class="text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded">Online v4.2</span>
+                    </div>
+
+                    <div class="space-y-3 text-gray-300">
+                        <div class="bg-nl-800/60 p-3 rounded-xl space-y-1 border border-gray-800">
+                            <span class="text-nl-red font-bold">User:</span> <span class="text-white">!stats Alex_Vercetti</span>
+                        </div>
+                        <div class="bg-nl-700/40 p-3 rounded-xl space-y-2 border border-gray-700/50">
+                            <div class="flex items-center gap-2 text-white font-bold">
+                                <i class="fa-solid fa-robot text-nl-red"></i> NewLife Bot <span class="text-[10px] text-gray-400 font-normal">Hoy a las 20:42</span>
+                            </div>
+                            <p class="text-gray-300">📊 <strong>Estadísticas de Jugador:</strong></p>
+                            <div class="grid grid-cols-2 gap-2 text-[11px] pt-1">
+                                <div>• Nivel: <span class="text-white font-bold">34</span></div>
+                                <div>• Banco: <span class="text-emerald-400 font-bold">$45,200</span></div>
+                                <div>• Facción: <span class="text-blue-400 font-bold">EMS</span></div>
+                                <div>• VIP: <span class="text-amber-400 font-bold">Diamond</span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Input simulado de comandos -->
+                    <div class="flex gap-2 pt-2">
+                        <input type="text" id="bot-input" placeholder="Prueba escribir !ayuda, !ping..." class="flex-1 bg-nl-800 border border-gray-700 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-nl-red">
+                        <button onclick="simulateBotCommand()" class="bg-nl-red hover:bg-red-600 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all">Enviar</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 5. STAFF DIRECTORY SECTION -->
+        <section id="staff" class="max-w-7xl mx-auto px-6 space-y-8">
+            <div class="text-center max-w-xl mx-auto space-y-2">
+                <span class="text-nl-red text-xs font-bold tracking-widest uppercase">Equipo de Administración</span>
+                <h2 class="text-2xl md:text-3xl font-black text-white">Staff al Servicio de la Comunidad</h2>
+                <p class="text-xs text-gray-400">Moderadores, administradores y desarrolladores trabajando para mantener el orden.</p>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <!-- Staff 1 -->
+                <div class="glass-card p-5 rounded-2xl text-center space-y-3">
+                    <img src="https://placehold.co/90x90/171924/d98d75?text=Owner" alt="Avatar Staff" class="w-20 h-20 rounded-2xl mx-auto border-2 border-nl-red object-cover glow-red-sm">
+                    <div>
+                        <h4 class="font-bold text-white text-sm">Zack_Miller</h4>
+                        <span class="text-xs text-nl-red font-semibold">Fundador & Developer</span>
+                    </div>
+                    <span class="inline-block bg-nl-800 text-gray-300 text-[10px] px-2.5 py-1 rounded-full">Activo en Discord</span>
+                </div>
+
+                <!-- Staff 2 -->
+                <div class="glass-card p-5 rounded-2xl text-center space-y-3">
+                    <img src="https://placehold.co/90x90/171924/3b82f6?text=Admin" alt="Avatar Staff" class="w-20 h-20 rounded-2xl mx-auto border-2 border-blue-500 object-cover">
+                    <div>
+                        <h4 class="font-bold text-white text-sm">Kira_Yagami</h4>
+                        <span class="text-xs text-blue-400 font-semibold">Admin General</span>
+                    </div>
+                    <span class="inline-block bg-nl-800 text-gray-300 text-[10px] px-2.5 py-1 rounded-full">En Juego</span>
+                </div>
+
+                <!-- Staff 3 -->
+                <div class="glass-card p-5 rounded-2xl text-center space-y-3">
+                    <img src="https://placehold.co/90x90/171924/10b981?text=Mod" alt="Avatar Staff" class="w-20 h-20 rounded-2xl mx-auto border-2 border-emerald-500 object-cover">
+                    <div>
+                        <h4 class="font-bold text-white text-sm">Lucas_Gomez</h4>
+                        <span class="text-xs text-emerald-400 font-semibold">Moderador Lider</span>
+                    </div>
+                    <span class="inline-block bg-nl-800 text-gray-300 text-[10px] px-2.5 py-1 rounded-full">Activo en Discord</span>
+                </div>
+
+                <!-- Staff 4 -->
+                <div class="glass-card p-5 rounded-2xl text-center space-y-3">
+                    <img src="https://placehold.co/90x90/171924/f59e0b?text=Dev" alt="Avatar Staff" class="w-20 h-20 rounded-2xl mx-auto border-2 border-amber-500 object-cover">
+                    <div>
+                        <h4 class="font-bold text-white text-sm">Matrix_01</h4>
+                        <span class="text-xs text-amber-400 font-semibold">Scripter MTA</span>
+                    </div>
+                    <span class="inline-block bg-nl-800 text-gray-300 text-[10px] px-2.5 py-1 rounded-full">En Juego</span>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-nl-800/90 border-t border-gray-800 py-8 px-6 text-center space-y-4 text-xs text-gray-400">
+        <div class="flex justify-center items-center gap-6">
+            <a href="#hero" class="hover:text-white transition-colors">Términos</a>
+            <a href="#news" class="hover:text-white transition-colors">Reglamento</a>
+            <a href="#bots" class="hover:text-white transition-colors">Discord Bot</a>
+            <a href="#staff" class="hover:text-white transition-colors">Contacto</a>
+        </div>
+        <p>New Life Roleplay MTA:SA &copy; 2026. Todos los derechos reservados. No afiliado con Rockstar Games.</p>
+    </footer>
+
+    <!-- Scripts Interactivos -->
+    <script>
+        // Copiar IP con portapapeles seguro
+        function copyIP() {
+            const ipText = "mta.newliferp.es:22003";
+            const textArea = document.createElement("textarea");
+            textArea.value = ipText;
+            document.body.appendChild(textArea);
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                showToast('Portapapeles', 'IP copiada correctamente: ' + ipText, 'success');
+            } catch (err) {
+                showToast('Error', 'No se pudo copiar la IP', 'error');
+            }
+            document.body.removeChild(textArea);
+        }
+
+        // Sistema de Notificaciones Toast
+        function showToast(title, message, type = 'success') {
+            const toast = document.getElementById('toast');
+            const toastTitle = document.getElementById('toast-title');
+            const toastMsg = document.getElementById('toast-msg');
+            const toastIcon = document.getElementById('toast-icon');
+
+            toastTitle.innerText = title;
+            toastMsg.innerText = message;
+
+            if(type === 'success') {
+                toastIcon.className = "fa-solid fa-circle-check text-nl-red text-xl";
+            } else {
+                toastIcon.className = "fa-solid fa-circle-info text-blue-400 text-xl";
+            }
+
+            toast.classList.remove('translate-y-32', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('translate-y-32', 'opacity-0');
+            }, 3500);
+        }
+
+        // Filtro de noticias
+        function filterNews(category) {
+            const cards = document.querySelectorAll('.news-card');
+            const btnAll = document.getElementById('btn-all');
+            const btnUpdate = document.getElementById('btn-update');
+            const btnEvent = document.getElementById('btn-event');
+
+            // Resetear botones
+            [btnAll, btnUpdate, btnEvent].forEach(b => {
+                b.className = "px-4 py-2 rounded-lg text-gray-400 hover:text-white transition-all";
+            });
+
+            if(category === 'all') {
+                btnAll.className = "px-4 py-2 rounded-lg bg-nl-red text-white transition-all";
+                cards.forEach(card => card.style.display = 'flex');
+            } else if(category === 'update') {
+                btnUpdate.className = "px-4 py-2 rounded-lg bg-nl-red text-white transition-all";
+                cards.forEach(card => {
+                    if(card.getAttribute('data-category') === 'update') card.style.display = 'flex';
+                    else card.style.display = 'none';
+                });
+            } else if(category === 'event') {
+                btnEvent.className = "px-4 py-2 rounded-lg bg-nl-red text-white transition-all";
+                cards.forEach(card => {
+                    if(card.getAttribute('data-category') === 'event') card.style.display = 'flex';
+                    else card.style.display = 'none';
+                });
+            }
+        }
+
+        // Simular comando de bot en chat interactivo
+        function simulateBotCommand() {
+            const input = document.getElementById('bot-input');
+            const val = input.value.trim();
+            if(!val) return;
+            showToast('Bot Discord', 'Comando ejecutado: ' + val, 'success');
+            input.value = '';
+        }
+    </script>
+</body>
+</html>
