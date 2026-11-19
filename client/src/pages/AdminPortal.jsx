@@ -19,6 +19,10 @@ import {
   KeyRound,
   Save,
   Radio,
+  Briefcase,
+  Crown,
+  LifeBuoy,
+  Film,
 } from 'lucide-react';
 import { api } from '../api/client';
 
@@ -27,6 +31,10 @@ const TABS = [
   { id: 'mta-status', label: 'Estado & Discord Bot', icon: Radio },
   { id: 'news', label: 'Noticias & Parches', icon: Newspaper },
   { id: 'whitelist', label: 'Whitelist', icon: FileCheck2 },
+  { id: 'factions', label: 'Facciones & Oposiciones', icon: Briefcase },
+  { id: 'store', label: 'Tienda VIP', icon: Crown },
+  { id: 'support', label: 'Soporte & Apelaciones', icon: LifeBuoy },
+  { id: 'gallery', label: 'Galería & Trailer', icon: Film },
   { id: 'features', label: 'Características', icon: Sparkles },
   { id: 'staff', label: 'Staff', icon: Users },
   { id: 'rules', label: 'Reglamento', icon: BookOpen },
@@ -231,7 +239,13 @@ export function AdminPortal({ discordUser, onToast, onSiteRefresh }) {
             const Icon = t.icon;
             const active = tab === t.id;
             const pendingCount =
-              t.id === 'whitelist' ? dashboard?.stats?.pendingWhitelist || 0 : 0;
+              t.id === 'whitelist'
+                ? dashboard?.stats?.pendingWhitelist || 0
+                : t.id === 'factions'
+                ? dashboard?.stats?.pendingFactionApps || 0
+                : t.id === 'support'
+                ? dashboard?.stats?.openTickets || 0
+                : 0;
 
             return (
               <button
@@ -286,6 +300,37 @@ export function AdminPortal({ discordUser, onToast, onSiteRefresh }) {
               {tab === 'whitelist' && (
                 <WhitelistManager
                   items={dashboard?.whitelist || []}
+                  onRefresh={refreshAll}
+                  onToast={onToast}
+                />
+              )}
+              {tab === 'factions' && (
+                <FactionsManager
+                  factions={dashboard?.factions || []}
+                  applications={dashboard?.factionApplications || []}
+                  onRefresh={refreshAll}
+                  onToast={onToast}
+                />
+              )}
+              {tab === 'store' && (
+                <StoreManager
+                  items={dashboard?.store || []}
+                  settings={dashboard?.settings || {}}
+                  onRefresh={refreshAll}
+                  onToast={onToast}
+                />
+              )}
+              {tab === 'support' && (
+                <SupportManager
+                  items={dashboard?.supportTickets || []}
+                  onRefresh={refreshAll}
+                  onToast={onToast}
+                />
+              )}
+              {tab === 'gallery' && (
+                <GalleryManager
+                  items={dashboard?.gallery || []}
+                  settings={dashboard?.settings || {}}
                   onRefresh={refreshAll}
                   onToast={onToast}
                 />
@@ -1601,6 +1646,693 @@ function SettingsManager({ settings, onRefresh, onToast, onlyMtaDiscord = false 
         </button>
       </form>
       )}
+    </div>
+  );
+}
+
+function FactionsManager({ factions, applications, onRefresh, onToast }) {
+  const [form, setForm] = useState({
+    name: '',
+    shortCode: 'LSPD',
+    type: 'legal',
+    description: '',
+    requirements: '',
+    color: 'blue',
+    isOpen: true,
+  });
+  const [appFilter, setAppFilter] = useState('pending');
+  const [selectedApp, setSelectedApp] = useState(null);
+  const [note, setNote] = useState('');
+
+  const handleAddFaction = async (e) => {
+    e.preventDefault();
+    try {
+      await api.createFaction(form);
+      setForm({
+        name: '',
+        shortCode: 'LSPD',
+        type: 'legal',
+        description: '',
+        requirements: '',
+        color: 'blue',
+        isOpen: true,
+      });
+      onToast('Facción Creada', 'Facción agregada al portal.', 'success');
+      await onRefresh();
+    } catch (err) {
+      onToast('Error', err.message, 'error');
+    }
+  };
+
+  const toggleOpen = async (fac) => {
+    await api.updateFaction(fac.id, { ...fac, isOpen: !fac.isOpen });
+    onToast(
+      'Estado Actualizado',
+      `Oposiciones de ${fac.shortCode}: ${!fac.isOpen ? 'Abiertas' : 'Cerradas'}`,
+      'info'
+    );
+    await onRefresh();
+  };
+
+  const handleDeleteFaction = async (id) => {
+    await api.deleteFaction(id);
+    onToast('Eliminada', 'Facción eliminada.', 'info');
+    await onRefresh();
+  };
+
+  const handleReviewApp = async (id, status) => {
+    await api.reviewFactionApp(id, status, note);
+    onToast('Oposición Revisada', 'Estado actualizado.', 'success');
+    setSelectedApp(null);
+    setNote('');
+    await onRefresh();
+  };
+
+  const filteredApps =
+    appFilter === 'all'
+      ? applications
+      : applications.filter((a) => a.status === appFilter);
+
+  return (
+    <div className="space-y-8">
+      <form onSubmit={handleAddFaction} className="glass-card rounded-2xl p-6 space-y-4">
+        <h2 className="text-base font-bold text-white">Crear Nueva Facción</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 text-xs">
+          <input
+            required
+            placeholder="Nombre (ej. Policía de Los Santos)"
+            value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
+            className="sm:col-span-2 bg-nl-900 border border-gray-700 rounded-xl px-3 py-2 text-white"
+          />
+          <input
+            required
+            placeholder="Siglas (ej. LSPD, EMS)"
+            value={form.shortCode}
+            onChange={(e) => setForm({ ...form, shortCode: e.target.value })}
+            className="bg-nl-900 border border-gray-700 rounded-xl px-3 py-2 text-white"
+          />
+          <select
+            value={form.type}
+            onChange={(e) => setForm({ ...form, type: e.target.value })}
+            className="bg-nl-900 border border-gray-700 rounded-xl px-3 py-2 text-white"
+          >
+            <option value="legal">Facción Legal</option>
+            <option value="illegal">Banda / Mafia Ilegal</option>
+          </select>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+          <textarea
+            required
+            rows={2}
+            placeholder="Descripción de la facción..."
+            value={form.description}
+            onChange={(e) => setForm({ ...form, description: e.target.value })}
+            className="bg-nl-900 border border-gray-700 rounded-xl px-3 py-2 text-white"
+          />
+          <textarea
+            rows={2}
+            placeholder="Requisitos (ej. Micrófono, +16 años, conocer normativa)..."
+            value={form.requirements}
+            onChange={(e) => setForm({ ...form, requirements: e.target.value })}
+            className="bg-nl-900 border border-gray-700 rounded-xl px-3 py-2 text-white"
+          />
+        </div>
+
+        <div className="flex flex-wrap items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-3">
+            <select
+              value={form.color}
+              onChange={(e) => setForm({ ...form, color: e.target.value })}
+              className="bg-nl-900 border border-gray-700 rounded-xl px-3 py-2 text-white"
+            >
+              <option value="blue">Color: Azul</option>
+              <option value="emerald">Color: Esmeralda</option>
+              <option value="copper">Color: Cobre</option>
+              <option value="amber">Color: Ámbar</option>
+            </select>
+            <label className="flex items-center gap-2 text-gray-300 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={form.isOpen}
+                onChange={(e) => setForm({ ...form, isOpen: e.target.checked })}
+                className="accent-nl-red"
+              />
+              Oposiciones Abiertas
+            </label>
+          </div>
+          <button
+            type="submit"
+            className="bg-nl-red text-white font-bold px-5 py-2.5 rounded-xl"
+          >
+            + Publicar Facción
+          </button>
+        </div>
+      </form>
+
+      {/* Factions List */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {factions.map((fac) => (
+          <div
+            key={fac.id}
+            className="glass-card rounded-2xl p-4 flex items-center justify-between gap-3"
+          >
+            <div>
+              <span className="text-[10px] font-bold uppercase text-nl-red">
+                {fac.shortCode} • {fac.isOpen ? 'Abierta' : 'Cerrada'}
+              </span>
+              <h3 className="text-sm font-bold text-white">{fac.name}</h3>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => toggleOpen(fac)}
+                className="text-xs font-bold px-3 py-1.5 rounded-xl bg-nl-700 hover:bg-nl-600 text-white"
+              >
+                {fac.isOpen ? 'Cerrar' : 'Abrir'}
+              </button>
+              <button
+                onClick={() => handleDeleteFaction(fac.id)}
+                className="p-2 rounded-xl bg-red-500/15 text-red-400"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Faction Applications Review */}
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-base font-bold text-white">
+            Postulaciones Recibidas ({filteredApps.length})
+          </h2>
+          <div className="flex gap-1.5 bg-nl-800 p-1 rounded-xl border border-gray-800 text-xs font-semibold">
+            {[
+              { id: 'pending', label: 'Pendientes' },
+              { id: 'approved', label: 'Aceptadas' },
+              { id: 'rejected', label: 'Rechazadas' },
+              { id: 'all', label: 'Todas' },
+            ].map((f) => (
+              <button
+                key={f.id}
+                onClick={() => setAppFilter(f.id)}
+                className={`px-3 py-1.5 rounded-lg ${
+                  appFilter === f.id ? 'bg-nl-red text-white' : 'text-gray-400'
+                }`}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {filteredApps.map((app) => (
+          <div key={app.id} className="glass-card rounded-2xl p-5 space-y-3 text-xs">
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="font-mono text-nl-red font-bold">
+                  {app.trackingCode}
+                </span>{' '}
+                • <strong className="text-white">{app.factionName}</strong> —{' '}
+                {app.characterName} ({app.discordTag}, {app.age} años)
+              </div>
+              <button
+                onClick={() => {
+                  setSelectedApp(selectedApp?.id === app.id ? null : app);
+                  setNote(app.staffNote || '');
+                }}
+                className="bg-nl-700 text-white font-bold px-3 py-1.5 rounded-xl"
+              >
+                {selectedApp?.id === app.id ? 'Ocultar' : 'Revisar'}
+              </button>
+            </div>
+
+            {selectedApp?.id === app.id && (
+              <div className="border-t border-gray-800 pt-3 space-y-3">
+                <div>
+                  <strong className="text-nl-red block">Experiencia:</strong>
+                  <p className="text-gray-300 bg-nl-900 p-3 rounded-xl mt-1">
+                    {app.experience}
+                  </p>
+                </div>
+                <div>
+                  <strong className="text-nl-red block">Motivación:</strong>
+                  <p className="text-gray-300 bg-nl-900 p-3 rounded-xl mt-1">
+                    {app.motivation}
+                  </p>
+                </div>
+                <input
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  placeholder="Nota para el postulante..."
+                  className="w-full bg-nl-900 border border-gray-700 rounded-xl px-3 py-2 text-white"
+                />
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleReviewApp(app.id, 'approved')}
+                    className="bg-emerald-600 text-white font-bold px-4 py-2 rounded-xl"
+                  >
+                    Aceptar
+                  </button>
+                  <button
+                    onClick={() => handleReviewApp(app.id, 'rejected')}
+                    className="bg-red-600 text-white font-bold px-4 py-2 rounded-xl"
+                  >
+                    Rechazar
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function StoreManager({ items, settings, onRefresh, onToast }) {
+  const [form, setForm] = useState({
+    title: '',
+    category: 'VIP',
+    price: '',
+    badge: '',
+    description: '',
+    perks: '',
+    imageUrl: '',
+    color: 'copper',
+    buyUrl: '',
+  });
+  const [defaultBuyUrl, setDefaultBuyUrl] = useState(settings.storeBuyUrl || '');
+
+  const handleAdd = async (e) => {
+    e.preventDefault();
+    try {
+      await api.createStoreItem(form);
+      setForm({
+        title: '',
+        category: 'VIP',
+        price: '',
+        badge: '',
+        description: '',
+        perks: '',
+        imageUrl: '',
+        color: 'copper',
+        buyUrl: '',
+      });
+      onToast('Paquete Creado', 'Agregado a la Tienda VIP.', 'success');
+      await onRefresh();
+    } catch (err) {
+      onToast('Error', err.message, 'error');
+    }
+  };
+
+  const handleSaveDefaultUrl = async () => {
+    await api.updateSettings({ storeBuyUrl: defaultBuyUrl });
+    onToast('Guardado', 'Enlace de compra general actualizado.', 'success');
+    await onRefresh();
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="glass-card rounded-2xl p-5 flex flex-col sm:flex-row gap-3 items-end text-xs">
+        <div className="flex-1 w-full">
+          <label className="block text-gray-400 mb-1">
+            Enlace General de Compra (Ticket de Discord / PayPal / Tebex)
+          </label>
+          <input
+            value={defaultBuyUrl}
+            onChange={(e) => setDefaultBuyUrl(e.target.value)}
+            placeholder="https://discord.gg/..."
+            className="w-full bg-nl-900 border border-gray-700 rounded-xl px-3 py-2 text-white"
+          />
+        </div>
+        <button
+          type="button"
+          onClick={handleSaveDefaultUrl}
+          className="bg-nl-700 hover:bg-nl-600 text-white font-bold px-4 py-2 rounded-xl"
+        >
+          Guardar Enlace
+        </button>
+      </div>
+
+      <form onSubmit={handleAdd} className="glass-card rounded-2xl p-6 space-y-4 text-xs">
+        <h2 className="text-base font-bold text-white">Agregar Paquete a Tienda VIP</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+          <input
+            required
+            placeholder="Título (ej. VIP Diamond)"
+            value={form.title}
+            onChange={(e) => setForm({ ...form, title: e.target.value })}
+            className="bg-nl-900 border border-gray-700 rounded-xl px-3 py-2 text-white"
+          />
+          <input
+            required
+            placeholder="Precio (ej. $14.99 USD)"
+            value={form.price}
+            onChange={(e) => setForm({ ...form, price: e.target.value })}
+            className="bg-nl-900 border border-gray-700 rounded-xl px-3 py-2 text-white"
+          />
+          <select
+            value={form.category}
+            onChange={(e) => setForm({ ...form, category: e.target.value })}
+            className="bg-nl-900 border border-gray-700 rounded-xl px-3 py-2 text-white"
+          >
+            <option value="VIP">Membresías VIP</option>
+            <option value="Vehículos">Vehículos Exclusivos</option>
+            <option value="Propiedades">Mansiones & Mapeos</option>
+            <option value="Otros">Otros</option>
+          </select>
+          <input
+            placeholder="Etiqueta (ej. Más Vendido)"
+            value={form.badge}
+            onChange={(e) => setForm({ ...form, badge: e.target.value })}
+            className="bg-nl-900 border border-gray-700 rounded-xl px-3 py-2 text-white"
+          />
+        </div>
+
+        <input
+          required
+          placeholder="Descripción corta del paquete *"
+          value={form.description}
+          onChange={(e) => setForm({ ...form, description: e.target.value })}
+          className="w-full bg-nl-900 border border-gray-700 rounded-xl px-3 py-2 text-white"
+        />
+
+        <textarea
+          rows={3}
+          placeholder="Lista de beneficios (escribe 1 beneficio por línea)..."
+          value={form.perks}
+          onChange={(e) => setForm({ ...form, perks: e.target.value })}
+          className="w-full bg-nl-900 border border-gray-700 rounded-xl px-3 py-2 text-white"
+        />
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <input
+            placeholder="URL de Imagen (Opcional)"
+            value={form.imageUrl}
+            onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
+            className="bg-nl-900 border border-gray-700 rounded-xl px-3 py-2 text-white"
+          />
+          <input
+            placeholder="Link de pago individual (Opcional)"
+            value={form.buyUrl}
+            onChange={(e) => setForm({ ...form, buyUrl: e.target.value })}
+            className="bg-nl-900 border border-gray-700 rounded-xl px-3 py-2 text-white"
+          />
+          <select
+            value={form.color}
+            onChange={(e) => setForm({ ...form, color: e.target.value })}
+            className="bg-nl-900 border border-gray-700 rounded-xl px-3 py-2 text-white"
+          >
+            <option value="copper">Color: Cobre</option>
+            <option value="amber">Color: Oro / Ámbar</option>
+            <option value="blue">Color: Diamante / Azul</option>
+            <option value="emerald">Color: Esmeralda</option>
+          </select>
+        </div>
+
+        <button
+          type="submit"
+          className="bg-nl-red text-white font-bold px-5 py-2.5 rounded-xl"
+        >
+          + Publicar en Tienda
+        </button>
+      </form>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {items.map((item) => (
+          <div
+            key={item.id}
+            className="glass-card rounded-2xl p-4 flex items-center justify-between gap-3"
+          >
+            <div>
+              <span className="text-[10px] font-bold uppercase text-nl-red">
+                {item.category} • {item.price}
+              </span>
+              <h3 className="text-sm font-bold text-white">{item.title}</h3>
+            </div>
+            <button
+              onClick={async () => {
+                await api.deleteStoreItem(item.id);
+                onToast('Eliminado', 'Paquete eliminado.', 'info');
+                await onRefresh();
+              }}
+              className="p-2 rounded-xl bg-red-500/15 text-red-400"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SupportManager({ items, onRefresh, onToast }) {
+  const [filter, setFilter] = useState('open');
+  const [selected, setSelected] = useState(null);
+  const [response, setResponse] = useState('');
+
+  const filtered =
+    filter === 'all' ? items : items.filter((t) => t.status === filter);
+
+  const handleResolve = async (id, status) => {
+    await api.reviewSupportTicket(id, status, response);
+    onToast('Ticket Actualizado', 'Respuesta guardada.', 'success');
+    setSelected(null);
+    setResponse('');
+    await onRefresh();
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-base font-bold text-white">
+          Tickets de Soporte, Reportes & Apelaciones ({filtered.length})
+        </h2>
+        <div className="flex gap-1.5 bg-nl-800 p-1 rounded-xl border border-gray-800 text-xs font-semibold">
+          {[
+            { id: 'open', label: 'Abiertos' },
+            { id: 'resolved', label: 'Resueltos' },
+            { id: 'rejected', label: 'Rechazados' },
+            { id: 'all', label: 'Todos' },
+          ].map((f) => (
+            <button
+              key={f.id}
+              onClick={() => setFilter(f.id)}
+              className={`px-3 py-1.5 rounded-lg ${
+                filter === f.id ? 'bg-nl-red text-white' : 'text-gray-400'
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {filtered.length === 0 ? (
+        <div className="glass-card rounded-2xl p-8 text-center text-xs text-gray-400">
+          No hay tickets en esta categoría.
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {filtered.map((t) => (
+            <div key={t.id} className="glass-card rounded-2xl p-5 space-y-3 text-xs">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <span className="font-mono text-nl-red font-bold">
+                    {t.ticketCode}
+                  </span>{' '}
+                  •{' '}
+                  <span className="uppercase font-bold text-amber-400">
+                    [{t.type}]
+                  </span>{' '}
+                  <strong className="text-white">{t.subject}</strong> ({t.discordTag})
+                </div>
+                <button
+                  onClick={() => {
+                    setSelected(selected?.id === t.id ? null : t);
+                    setResponse(t.staffResponse || '');
+                  }}
+                  className="bg-nl-700 text-white font-bold px-3 py-1.5 rounded-xl"
+                >
+                  {selected?.id === t.id ? 'Ocultar' : 'Atender'}
+                </button>
+              </div>
+
+              {selected?.id === t.id && (
+                <div className="border-t border-gray-800 pt-3 space-y-3">
+                  {t.characterName && (
+                    <div>Personaje IC: <strong className="text-white">{t.characterName}</strong></div>
+                  )}
+                  {t.mtaSerial && (
+                    <div className="font-mono">Serial MTA: <strong className="text-white">{t.mtaSerial}</strong></div>
+                  )}
+                  <p className="text-gray-300 bg-nl-900 p-3 rounded-xl whitespace-pre-line">
+                    {t.description}
+                  </p>
+                  {t.evidenceUrl && (
+                    <div>
+                      Pruebas:{' '}
+                      <a
+                        href={t.evidenceUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-nl-red underline break-all"
+                      >
+                        {t.evidenceUrl}
+                      </a>
+                    </div>
+                  )}
+                  <input
+                    value={response}
+                    onChange={(e) => setResponse(e.target.value)}
+                    placeholder="Escribe la resolución o respuesta para el jugador..."
+                    className="w-full bg-nl-900 border border-gray-700 rounded-xl px-3 py-2 text-white"
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleResolve(t.id, 'resolved')}
+                      className="bg-emerald-600 text-white font-bold px-4 py-2 rounded-xl"
+                    >
+                      Marcar Resuelto / Aceptar
+                    </button>
+                    <button
+                      onClick={() => handleResolve(t.id, 'rejected')}
+                      className="bg-red-600 text-white font-bold px-4 py-2 rounded-xl"
+                    >
+                      Rechazar Ticket
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function GalleryManager({ items, settings, onRefresh, onToast }) {
+  const [heroVideo, setHeroVideo] = useState(settings.heroVideoUrl || '');
+  const [form, setForm] = useState({
+    title: '',
+    mediaType: 'image',
+    mediaUrl: '',
+    author: '',
+  });
+
+  const handleSaveHeroVideo = async () => {
+    await api.updateSettings({ heroVideoUrl: heroVideo });
+    onToast('Video Guardado', 'Video de fondo del Hero actualizado.', 'success');
+    await onRefresh();
+  };
+
+  const handleAddMedia = async (e) => {
+    e.preventDefault();
+    try {
+      await api.createGalleryItem(form);
+      setForm({ title: '', mediaType: 'image', mediaUrl: '', author: '' });
+      onToast('Agregado', 'Elemento agregado a la galería.', 'success');
+      await onRefresh();
+    } catch (err) {
+      onToast('Error', err.message, 'error');
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="glass-card rounded-2xl p-6 space-y-3 text-xs">
+        <h2 className="text-base font-bold text-white">
+          Video Trailer de Fondo en el Inicio (Hero)
+        </h2>
+        <p className="text-gray-400">
+          Pega un enlace directo a un archivo de video (.mp4 / .webm) para que se
+          reproduzca de fondo detrás del logo principal. Déjalo vacío para usar el
+          fondo oscuro clásico.
+        </p>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <input
+            value={heroVideo}
+            onChange={(e) => setHeroVideo(e.target.value)}
+            placeholder="https://.../trailer.mp4"
+            className="flex-1 bg-nl-900 border border-gray-700 rounded-xl px-3.5 py-2.5 text-white"
+          />
+          <button
+            type="button"
+            onClick={handleSaveHeroVideo}
+            className="bg-nl-red text-white font-bold px-5 py-2.5 rounded-xl"
+          >
+            Guardar Trailer
+          </button>
+        </div>
+      </div>
+
+      <form onSubmit={handleAddMedia} className="glass-card rounded-2xl p-6 space-y-4 text-xs">
+        <h2 className="text-base font-bold text-white">
+          Agregar Foto o Clip a la Galería de la Comunidad
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <input
+            required
+            placeholder="Título de la foto / escena *"
+            value={form.title}
+            onChange={(e) => setForm({ ...form, title: e.target.value })}
+            className="bg-nl-900 border border-gray-700 rounded-xl px-3 py-2 text-white"
+          />
+          <select
+            value={form.mediaType}
+            onChange={(e) => setForm({ ...form, mediaType: e.target.value })}
+            className="bg-nl-900 border border-gray-700 rounded-xl px-3 py-2 text-white"
+          >
+            <option value="image">Imagen / Captura (.png, .jpg)</option>
+            <option value="video">Clip de Video (.mp4)</option>
+          </select>
+          <input
+            placeholder="Autor (ej. @jugador)"
+            value={form.author}
+            onChange={(e) => setForm({ ...form, author: e.target.value })}
+            className="bg-nl-900 border border-gray-700 rounded-xl px-3 py-2 text-white"
+          />
+        </div>
+        <input
+          required
+          placeholder="URL directa de la imagen o video (ej. Imgur / Discord CDN) *"
+          value={form.mediaUrl}
+          onChange={(e) => setForm({ ...form, mediaUrl: e.target.value })}
+          className="w-full bg-nl-900 border border-gray-700 rounded-xl px-3 py-2 text-white"
+        />
+        <button
+          type="submit"
+          className="bg-nl-red text-white font-bold px-5 py-2.5 rounded-xl"
+        >
+          + Publicar en Galería
+        </button>
+      </form>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {items.map((item) => (
+          <div
+            key={item.id}
+            className="glass-card rounded-2xl p-3 flex items-center justify-between gap-2 text-xs"
+          >
+            <span className="font-bold text-white truncate">{item.title}</span>
+            <button
+              onClick={async () => {
+                await api.deleteGalleryItem(item.id);
+                onToast('Eliminado', 'Multimedia eliminada.', 'info');
+                await onRefresh();
+              }}
+              className="p-2 rounded-xl bg-red-500/15 text-red-400 shrink-0"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

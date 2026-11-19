@@ -28,6 +28,19 @@ export const api = {
     }),
   checkWhitelistStatus: (code) =>
     request(`/api/whitelist/status?code=${encodeURIComponent(code)}`),
+  applyFaction: (payload) =>
+    request('/api/factions/apply', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  submitSupportTicket: (payload) =>
+    request('/api/support', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  checkSupportStatus: (code) =>
+    request(`/api/support/status?code=${encodeURIComponent(code)}`),
+  getProfileSummary: () => request('/api/profile/summary'),
 
   // Admin Auth
   login: (username, password) =>
@@ -90,4 +103,36 @@ export const api = {
     }),
   deleteWhitelist: (id) =>
     request(`/api/admin/whitelist/${id}`, { method: 'DELETE' }),
+
+  createFaction: (item) =>
+    request('/api/admin/factions', { method: 'POST', body: JSON.stringify(item) }),
+  updateFaction: (id, item) =>
+    request(`/api/admin/factions/${id}`, { method: 'PUT', body: JSON.stringify(item) }),
+  deleteFaction: (id) =>
+    request(`/api/admin/factions/${id}`, { method: 'DELETE' }),
+  reviewFactionApp: (id, status, staffNote) =>
+    request(`/api/admin/faction-applications/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status, staffNote }),
+    }),
+  deleteFactionApp: (id) =>
+    request(`/api/admin/faction-applications/${id}`, { method: 'DELETE' }),
+
+  createStoreItem: (item) =>
+    request('/api/admin/store', { method: 'POST', body: JSON.stringify(item) }),
+  deleteStoreItem: (id) =>
+    request(`/api/admin/store/${id}`, { method: 'DELETE' }),
+
+  reviewSupportTicket: (id, status, staffResponse) =>
+    request(`/api/admin/support/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status, staffResponse }),
+    }),
+  deleteSupportTicket: (id) =>
+    request(`/api/admin/support/${id}`, { method: 'DELETE' }),
+
+  createGalleryItem: (item) =>
+    request('/api/admin/gallery', { method: 'POST', body: JSON.stringify(item) }),
+  deleteGalleryItem: (id) =>
+    request(`/api/admin/gallery/${id}`, { method: 'DELETE' }),
 };

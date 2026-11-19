@@ -15,7 +15,13 @@ export function HomePage({ data, onToast }) {
   const [newsFilter, setNewsFilter] = useState('all');
   const [selectedNews, setSelectedNews] = useState(null);
 
-  const { settings = {}, news = [], features = [], staff = [] } = data || {};
+  const {
+    settings = {},
+    news = [],
+    features = [],
+    staff = [],
+    gallery = [],
+  } = data || {};
   const ip = settings.serverIp || 'mta.newliferp.es:22003';
 
   const filteredNews =
@@ -43,6 +49,16 @@ export function HomePage({ data, onToast }) {
     <div className="space-y-20 pb-20">
       {/* 1. HERO SECTION */}
       <section id="hero" className="relative pt-12 pb-16 px-6 overflow-hidden">
+        {settings.heroVideoUrl && (
+          <video
+            src={settings.heroVideoUrl}
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="absolute inset-0 w-full h-full object-cover opacity-20 pointer-events-none"
+          />
+        )}
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-nl-red/10 via-nl-900/40 to-nl-900 pointer-events-none" />
 
         <div className="max-w-5xl mx-auto text-center space-y-8 relative z-10">
@@ -340,7 +356,55 @@ export function HomePage({ data, onToast }) {
         </div>
       </section>
 
-      {/* 5. STAFF */}
+      {/* 5. GALERÍA MULTIMEDIA (Si hay fotos/clips subidos en el Panel Admin) */}
+      {gallery.length > 0 && (
+        <section id="gallery" className="max-w-7xl mx-auto px-6 space-y-8">
+          <div className="text-center max-w-xl mx-auto space-y-2">
+            <span className="text-nl-red text-xs font-bold tracking-widest uppercase">
+              Comunidad en Acción
+            </span>
+            <h2 className="text-2xl md:text-3xl font-black text-white">
+              Galería Multimedia
+            </h2>
+            <p className="text-xs text-gray-400">
+              Los mejores momentos, eventos y escenas de rol dentro de New Life Roleplay.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {gallery.map((item) => (
+              <div
+                key={item.id}
+                className="glass-card rounded-2xl overflow-hidden group"
+              >
+                <div className="h-52 bg-nl-800 relative overflow-hidden">
+                  {item.mediaType === 'video' ? (
+                    <video
+                      src={item.mediaUrl}
+                      controls
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <img
+                      src={item.mediaUrl}
+                      alt={item.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                  )}
+                </div>
+                <div className="p-4 flex items-center justify-between text-xs">
+                  <span className="font-bold text-white">{item.title}</span>
+                  {item.author && (
+                    <span className="text-nl-red font-semibold">por {item.author}</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* 6. STAFF */}
       <section id="staff" className="max-w-7xl mx-auto px-6 space-y-8">
         <div className="text-center max-w-xl mx-auto space-y-2">
           <span className="text-nl-red text-xs font-bold tracking-widest uppercase">

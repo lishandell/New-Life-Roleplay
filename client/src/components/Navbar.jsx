@@ -64,7 +64,7 @@ export function Navbar({
         </Link>
 
         {/* Desktop Nav */}
-        <nav className="hidden lg:flex items-center gap-7 text-sm font-semibold text-gray-300">
+        <nav className="hidden lg:flex items-center gap-5 text-sm font-semibold text-gray-300">
           <Link
             to="/"
             className={`hover:text-nl-red transition-colors ${
@@ -79,12 +79,22 @@ export function Navbar({
           >
             Noticias
           </a>
-          <a
-            href={isHome ? '#features' : '/#features'}
-            className="hover:text-nl-red transition-colors"
+          <Link
+            to="/facciones"
+            className={`hover:text-nl-red transition-colors ${
+              location.pathname === '/facciones' ? 'text-nl-red' : ''
+            }`}
           >
-            Características
-          </a>
+            Facciones
+          </Link>
+          <Link
+            to="/tienda"
+            className={`hover:text-nl-red transition-colors ${
+              location.pathname === '/tienda' ? 'text-nl-red' : ''
+            }`}
+          >
+            Tienda VIP
+          </Link>
           <Link
             to="/reglamento"
             className={`hover:text-nl-red transition-colors ${
@@ -103,6 +113,14 @@ export function Navbar({
             {settings?.whitelistEnabled === 'true' && (
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
             )}
+          </Link>
+          <Link
+            to="/soporte"
+            className={`hover:text-nl-red transition-colors ${
+              location.pathname === '/soporte' ? 'text-nl-red' : ''
+            }`}
+          >
+            Soporte
           </Link>
         </nav>
 
@@ -138,27 +156,33 @@ export function Navbar({
 
           {discordUser ? (
             <div className="hidden sm:flex items-center gap-2 bg-nl-800 border border-gray-700/80 pl-2 pr-2.5 py-1 rounded-xl">
-              <img
-                src={discordUser.avatarUrl}
-                alt={discordUser.displayName}
-                className="w-7 h-7 rounded-lg object-cover border border-nl-red/40"
-              />
-              <div className="leading-tight">
-                <span className="text-xs font-bold text-white block max-w-[110px] truncate">
-                  {discordUser.displayName}
-                </span>
-                <span className="text-[10px] font-semibold text-nl-red block">
-                  {discordUser.isAdmin
-                    ? 'Admin'
-                    : discordUser.isStaff
-                    ? 'Staff'
-                    : discordUser.isVip
-                    ? 'VIP'
-                    : discordUser.isWhitelisted
-                    ? 'Whitelist'
-                    : 'Miembro'}
-                </span>
-              </div>
+              <Link
+                to="/perfil"
+                className="flex items-center gap-2 hover:opacity-90 transition-opacity"
+                title="Ver mi perfil de ciudadano"
+              >
+                <img
+                  src={discordUser.avatarUrl}
+                  alt={discordUser.displayName}
+                  className="w-7 h-7 rounded-lg object-cover border border-nl-red/40"
+                />
+                <div className="leading-tight">
+                  <span className="text-xs font-bold text-white block max-w-[110px] truncate">
+                    {discordUser.displayName}
+                  </span>
+                  <span className="text-[10px] font-semibold text-nl-red block">
+                    {discordUser.isAdmin
+                      ? 'Admin'
+                      : discordUser.isStaff
+                      ? 'Staff'
+                      : discordUser.isVip
+                      ? 'VIP'
+                      : discordUser.isWhitelisted
+                      ? 'Whitelist'
+                      : 'Mi Perfil'}
+                  </span>
+                </div>
+              </Link>
               {(discordUser.isAdmin || discordUser.isStaff) && (
                 <Link
                   to="/portal-nl-admin"
@@ -243,6 +267,34 @@ export function Navbar({
             className="block py-1.5 text-nl-red"
           >
             Whitelist
+          </Link>
+          <Link
+            to="/facciones"
+            onClick={() => setMobileOpen(false)}
+            className="block py-1.5 text-gray-200 hover:text-nl-red"
+          >
+            Facciones
+          </Link>
+          <Link
+            to="/tienda"
+            onClick={() => setMobileOpen(false)}
+            className="block py-1.5 text-gray-200 hover:text-nl-red"
+          >
+            Tienda VIP
+          </Link>
+          <Link
+            to="/soporte"
+            onClick={() => setMobileOpen(false)}
+            className="block py-1.5 text-gray-200 hover:text-nl-red"
+          >
+            Soporte & Apelaciones
+          </Link>
+          <Link
+            to="/perfil"
+            onClick={() => setMobileOpen(false)}
+            className="block py-1.5 text-gray-200 hover:text-nl-red"
+          >
+            Mi Perfil (Discord)
           </Link>
           <button
             onClick={copyIP}

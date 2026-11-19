@@ -13,6 +13,10 @@ import { ToastContainer } from './components/Toast';
 import { HomePage } from './pages/HomePage';
 import { WhitelistPage } from './pages/WhitelistPage';
 import { RulesPage } from './pages/RulesPage';
+import { FactionsPage } from './pages/FactionsPage';
+import { StorePage } from './pages/StorePage';
+import { SupportPage } from './pages/SupportPage';
+import { ProfilePage } from './pages/ProfilePage';
 import { AdminPortal } from './pages/AdminPortal';
 
 const SECRET_ADMIN_ROUTE = '/portal-nl-admin';
@@ -124,6 +128,38 @@ function AppShell() {
           <Route
             path="/reglamento"
             element={<RulesPage rules={siteData?.rules || []} />}
+          />
+          <Route
+            path="/facciones"
+            element={
+              <FactionsPage
+                factions={siteData?.factions || []}
+                discordUser={discordUser}
+                onToast={onToast}
+              />
+            }
+          />
+          <Route
+            path="/tienda"
+            element={
+              <StorePage
+                store={siteData?.store || []}
+                settings={siteData?.settings || {}}
+              />
+            }
+          />
+          <Route
+            path="/soporte"
+            element={
+              <SupportPage
+                discordUser={discordUser}
+                onToast={onToast}
+              />
+            }
+          />
+          <Route
+            path="/perfil"
+            element={<ProfilePage discordUser={discordUser} />}
           />
           <Route
             path={SECRET_ADMIN_ROUTE}

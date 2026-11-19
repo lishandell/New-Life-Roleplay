@@ -89,13 +89,30 @@ router.post('/change-password', requireAdmin, async (req, res) => {
 });
 
 router.get('/dashboard', requireStaffOrAdmin, async (_req, res) => {
-  const [settingRows, news, features, staff, rules, whitelist] = await Promise.all([
+  const [
+    settingRows,
+    news,
+    features,
+    staff,
+    rules,
+    whitelist,
+    factions,
+    factionApplications,
+    store,
+    supportTickets,
+    gallery,
+  ] = await Promise.all([
     db.all('SELECT "key", "value" FROM settings'),
     db.all('SELECT * FROM news ORDER BY "id" DESC'),
     db.all('SELECT * FROM features ORDER BY "sortOrder" ASC, "id" ASC'),
     db.all('SELECT * FROM staff ORDER BY "sortOrder" ASC, "id" ASC'),
     db.all('SELECT * FROM rules ORDER BY "sortOrder" ASC, "id" ASC'),
     db.all('SELECT * FROM whitelist_applications ORDER BY "id" DESC'),
+    db.all('SELECT * FROM factions ORDER BY "sortOrder" ASC, "id" ASC'),
+    db.all('SELECT * FROM faction_applications ORDER BY "id" DESC'),
+    db.all('SELECT * FROM store_items ORDER BY "sortOrder" ASC, "id" ASC'),
+    db.all('SELECT * FROM support_tickets ORDER BY "id" DESC'),
+    db.all('SELECT * FROM gallery_items ORDER BY "id" DESC'),
   ]);
 
   const settings = {};
@@ -106,11 +123,28 @@ router.get('/dashboard', requireStaffOrAdmin, async (_req, res) => {
     publishedNews: news.filter((n) => n.isPublished === 1).length,
     pendingWhitelist: whitelist.filter((w) => w.status === 'pending').length,
     totalWhitelist: whitelist.length,
+    pendingFactionApps: factionApplications.filter((f) => f.status === 'pending').length,
+    openTickets: supportTickets.filter((t) => t.status === 'open').length,
+    totalStoreItems: store.length,
+    totalGallery: gallery.length,
     totalStaff: staff.length,
     totalRules: rules.length,
   };
 
-  res.json({ settings, news, features, staff, rules, whitelist, stats });
+  res.json({
+    settings,
+    news,
+    features,
+    staff,
+    rules,
+    whitelist,
+    factions,
+    factionApplications,
+    store,
+    supportTickets,
+    gallery,
+    stats,
+  });
 });
 
 router.put('/settings', requireAdmin, async (req, res) => {
@@ -404,6 +438,200 @@ router.patch('/whitelist/:id', requireStaffOrAdmin, async (req, res) => {
 
 router.delete('/whitelist/:id', requireAdmin, async (req, res) => {
   await db.run('DELETE FROM whitelist_applications WHERE "id" = ?', [Number(req.params.id)]);
+  res.json({ ok: true });
+});
+
+// --- FACTIONS CRUD & APPLICATIONS ---
+router.post('/factions', requireAdmin, async (req, res) => {
+  const {
+    name = '',
+    shortCode = 'LSPD',
+    type = 'legal',
+    description = '',
+    requirements = '',
+    color = 'blue',
+    isOpen = 1,
+    sortOrder = 0,
+  } = req.body || {};
+
+  if (!name.trim() || !description.trim()) {
+    return res.status(400).json({ error: 'Nombre y descripción de facción requeridos.' });
+  }
+
+  const newId = await db.insert(
+    `INSERT INTO factions ("name", "shortCode", "type", "description", "requirements", "color", "isOpen", "sortOrder")
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      name.trim(),
+      shortCode.trim(),
+      type,
+      description.trim(),
+      requirements.trim(),
+      color,
+      isOpen ? 1 : 0,
+      Number(sortOrder) || 0,
+    ]
+  );
+  res.status(201).json(await db.get('SELECT * FROM factions WHERE "id" = ?', [newId]));
+});
+
+router.put('/factions/:id', requireAdmin, async (req, res) => {
+  const id = Number(req.params.id);
+  const existing = await db.get('SELECT * FROM factions WHERE "id" = ?', [id]);
+  if (!existing) return res.status(404).json({ error: 'Facción no encontrada.' });
+
+  const {
+    name = existing.name,
+    shortCode = existing.shortCode,
+    type = existing.type,
+    description = existing.description,
+    requirements = existing.requirements,
+    color = existing.color,
+    isOpen = existing.isOpen,
+    sortOrder = existing.sortOrder,
+  } = req.body || {};
+
+  await db.run(
+    `UPDATE factions SET "name" = ?, "shortCode" = ?, "type" = ?, "description" = ?, "requirements" = ?, "color" = ?, "isOpen" = ?, "sortOrder" = ? WHERE "id" = ?`,
+    [
+      name.trim(),
+      shortCode.trim(),
+      type,
+      description.trim(),
+      requirements.trim(),
+      color,
+      isOpen ? 1 : 0,
+      Number(sortOrder) || 0,
+      id,
+    ]
+  );
+  res.json(await db.get('SELECT * FROM factions WHERE "id" = ?', [id]));
+});
+
+router.delete('/factions/:id', requireAdmin, async (req, res) => {
+  await db.run('DELETE FROM factions WHERE "id" = ?', [Number(req.params.id)]);
+  res.json({ ok: true });
+});
+
+router.patch('/faction-applications/:id', requireStaffOrAdmin, async (req, res) => {
+  const id = Number(req.params.id);
+  const existing = await db.get(
+    'SELECT * FROM faction_applications WHERE "id" = ?',
+    [id]
+  );
+  if (!existing) return res.status(404).json({ error: 'Postulación no encontrada.' });
+
+  const { status, staffNote = '' } = req.body || {};
+  if (!['pending', 'approved', 'rejected'].includes(status)) {
+    return res.status(400).json({ error: 'Estado inválido.' });
+  }
+
+  const now = new Date().toISOString();
+  await db.run(
+    'UPDATE faction_applications SET "status" = ?, "staffNote" = ?, "reviewedBy" = ?, "updatedAt" = ? WHERE "id" = ?',
+    [status, staffNote.trim(), req.admin.username, now, id]
+  );
+  res.json(await db.get('SELECT * FROM faction_applications WHERE "id" = ?', [id]));
+});
+
+router.delete('/faction-applications/:id', requireAdmin, async (req, res) => {
+  await db.run('DELETE FROM faction_applications WHERE "id" = ?', [
+    Number(req.params.id),
+  ]);
+  res.json({ ok: true });
+});
+
+// --- STORE ITEMS CRUD ---
+router.post('/store', requireAdmin, async (req, res) => {
+  const {
+    title = '',
+    category = 'VIP',
+    price = '',
+    badge = '',
+    description = '',
+    perks = '',
+    imageUrl = '',
+    color = 'copper',
+    buyUrl = '',
+    sortOrder = 0,
+  } = req.body || {};
+
+  if (!title.trim() || !price.trim() || !description.trim()) {
+    return res.status(400).json({ error: 'Título, precio y descripción requeridos.' });
+  }
+
+  const newId = await db.insert(
+    `INSERT INTO store_items ("title", "category", "price", "badge", "description", "perks", "imageUrl", "color", "buyUrl", "sortOrder")
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      title.trim(),
+      category.trim(),
+      price.trim(),
+      badge.trim(),
+      description.trim(),
+      perks.trim(),
+      imageUrl.trim(),
+      color,
+      buyUrl.trim(),
+      Number(sortOrder) || 0,
+    ]
+  );
+  res.status(201).json(await db.get('SELECT * FROM store_items WHERE "id" = ?', [newId]));
+});
+
+router.delete('/store/:id', requireAdmin, async (req, res) => {
+  await db.run('DELETE FROM store_items WHERE "id" = ?', [Number(req.params.id)]);
+  res.json({ ok: true });
+});
+
+// --- SUPPORT TICKETS REVIEW ---
+router.patch('/support/:id', requireStaffOrAdmin, async (req, res) => {
+  const id = Number(req.params.id);
+  const existing = await db.get('SELECT * FROM support_tickets WHERE "id" = ?', [id]);
+  if (!existing) return res.status(404).json({ error: 'Ticket no encontrado.' });
+
+  const { status, staffResponse = '' } = req.body || {};
+  if (!['open', 'resolved', 'rejected'].includes(status)) {
+    return res.status(400).json({ error: 'Estado inválido.' });
+  }
+
+  const now = new Date().toISOString();
+  await db.run(
+    'UPDATE support_tickets SET "status" = ?, "staffResponse" = ?, "reviewedBy" = ?, "updatedAt" = ? WHERE "id" = ?',
+    [status, staffResponse.trim(), req.admin.username, now, id]
+  );
+  res.json(await db.get('SELECT * FROM support_tickets WHERE "id" = ?', [id]));
+});
+
+router.delete('/support/:id', requireAdmin, async (req, res) => {
+  await db.run('DELETE FROM support_tickets WHERE "id" = ?', [Number(req.params.id)]);
+  res.json({ ok: true });
+});
+
+// --- GALLERY CRUD ---
+router.post('/gallery', requireAdmin, async (req, res) => {
+  const {
+    title = '',
+    mediaType = 'image',
+    mediaUrl = '',
+    author = '',
+  } = req.body || {};
+
+  if (!title.trim() || !mediaUrl.trim()) {
+    return res.status(400).json({ error: 'Título y URL de imagen/video requeridos.' });
+  }
+
+  const now = new Date().toISOString();
+  const newId = await db.insert(
+    `INSERT INTO gallery_items ("title", "mediaType", "mediaUrl", "author", "createdAt")
+     VALUES (?, ?, ?, ?, ?)`,
+    [title.trim(), mediaType, mediaUrl.trim(), author.trim(), now]
+  );
+  res.status(201).json(await db.get('SELECT * FROM gallery_items WHERE "id" = ?', [newId]));
+});
+
+router.delete('/gallery/:id', requireAdmin, async (req, res) => {
+  await db.run('DELETE FROM gallery_items WHERE "id" = ?', [Number(req.params.id)]);
   res.json({ ok: true });
 });
 

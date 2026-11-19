@@ -152,6 +152,77 @@ export async function initDatabase() {
       "role" TEXT NOT NULL DEFAULT 'owner',
       "createdAt" TEXT NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS factions (
+      "id" ${idCol},
+      "name" TEXT NOT NULL,
+      "shortCode" TEXT NOT NULL DEFAULT 'LSPD',
+      "type" TEXT NOT NULL DEFAULT 'legal',
+      "description" TEXT NOT NULL,
+      "requirements" TEXT NOT NULL DEFAULT '',
+      "color" TEXT NOT NULL DEFAULT 'blue',
+      "isOpen" INTEGER NOT NULL DEFAULT 1,
+      "sortOrder" INTEGER NOT NULL DEFAULT 0
+    );
+
+    CREATE TABLE IF NOT EXISTS faction_applications (
+      "id" ${idCol},
+      "trackingCode" TEXT NOT NULL UNIQUE,
+      "factionId" INTEGER NOT NULL,
+      "factionName" TEXT NOT NULL,
+      "discordId" TEXT NOT NULL DEFAULT '',
+      "discordTag" TEXT NOT NULL,
+      "characterName" TEXT NOT NULL,
+      "age" INTEGER NOT NULL DEFAULT 18,
+      "experience" TEXT NOT NULL,
+      "motivation" TEXT NOT NULL,
+      "status" TEXT NOT NULL DEFAULT 'pending',
+      "staffNote" TEXT NOT NULL DEFAULT '',
+      "reviewedBy" TEXT NOT NULL DEFAULT '',
+      "createdAt" TEXT NOT NULL,
+      "updatedAt" TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS store_items (
+      "id" ${idCol},
+      "title" TEXT NOT NULL,
+      "category" TEXT NOT NULL DEFAULT 'VIP',
+      "price" TEXT NOT NULL,
+      "badge" TEXT NOT NULL DEFAULT '',
+      "description" TEXT NOT NULL,
+      "perks" TEXT NOT NULL DEFAULT '',
+      "imageUrl" TEXT NOT NULL DEFAULT '',
+      "color" TEXT NOT NULL DEFAULT 'copper',
+      "buyUrl" TEXT NOT NULL DEFAULT '',
+      "sortOrder" INTEGER NOT NULL DEFAULT 0
+    );
+
+    CREATE TABLE IF NOT EXISTS support_tickets (
+      "id" ${idCol},
+      "ticketCode" TEXT NOT NULL UNIQUE,
+      "type" TEXT NOT NULL DEFAULT 'report',
+      "discordId" TEXT NOT NULL DEFAULT '',
+      "discordTag" TEXT NOT NULL,
+      "characterName" TEXT NOT NULL DEFAULT '',
+      "mtaSerial" TEXT NOT NULL DEFAULT '',
+      "subject" TEXT NOT NULL,
+      "description" TEXT NOT NULL,
+      "evidenceUrl" TEXT NOT NULL DEFAULT '',
+      "status" TEXT NOT NULL DEFAULT 'open',
+      "staffResponse" TEXT NOT NULL DEFAULT '',
+      "reviewedBy" TEXT NOT NULL DEFAULT '',
+      "createdAt" TEXT NOT NULL,
+      "updatedAt" TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS gallery_items (
+      "id" ${idCol},
+      "title" TEXT NOT NULL,
+      "mediaType" TEXT NOT NULL DEFAULT 'image',
+      "mediaUrl" TEXT NOT NULL,
+      "author" TEXT NOT NULL DEFAULT '',
+      "createdAt" TEXT NOT NULL
+    );
   `;
 
   if (usePostgres) {
@@ -223,6 +294,10 @@ async function seedDefaults() {
     statusEmbedMode: 'Roleplay',
     statusEmbedAdmin: 'New Life Staff',
     statusEmbedPlayersText: '',
+    heroVideoUrl: '',
+    storeBuyUrl: '',
+    discordFactionsWebhookUrl: '',
+    discordSupportWebhookUrl: '',
   };
 
   for (const [k, v] of Object.entries(defaultSettings)) {
