@@ -266,27 +266,33 @@ export function HomePage({ data, onToast }) {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {features.map((feat) => {
-            const style = ACCENT_STYLES[feat.color] || ACCENT_STYLES.copper;
-            return (
-              <div
-                key={feat.id}
-                className="glass-card p-6 rounded-2xl space-y-4 hover:-translate-y-1"
-              >
+        {features.length === 0 ? (
+          <div className="glass-card rounded-2xl p-10 text-center text-gray-400 text-sm">
+            Aún no se han agregado características del servidor.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {features.map((feat) => {
+              const style = ACCENT_STYLES[feat.color] || ACCENT_STYLES.copper;
+              return (
                 <div
-                  className={`w-12 h-12 rounded-xl flex items-center justify-center border ${style.softBg}`}
+                  key={feat.id}
+                  className="glass-card p-6 rounded-2xl space-y-4 hover:-translate-y-1"
                 >
-                  <DynamicIcon name={feat.icon} className="w-6 h-6" />
+                  <div
+                    className={`w-12 h-12 rounded-xl flex items-center justify-center border ${style.softBg}`}
+                  >
+                    <DynamicIcon name={feat.icon} className="w-6 h-6" />
+                  </div>
+                  <h3 className="text-base font-bold text-white">{feat.title}</h3>
+                  <p className="text-xs text-gray-400 leading-relaxed">
+                    {feat.description}
+                  </p>
                 </div>
-                <h3 className="text-base font-bold text-white">{feat.title}</h3>
-                <p className="text-xs text-gray-400 leading-relaxed">
-                  {feat.description}
-                </p>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </section>
 
       {/* 4. BOTS & DISCORD */}

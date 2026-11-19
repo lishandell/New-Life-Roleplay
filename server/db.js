@@ -242,40 +242,16 @@ async function seedDefaults() {
     ]
   );
 
-  // 4. Seed features if empty
-  const featRow = await db.get('SELECT COUNT(*) as count FROM features');
-  if (Number(featRow?.count || 0) === 0) {
-    const sql =
-      'INSERT INTO features ("title", "description", "icon", "color", "sortOrder") VALUES (?, ?, ?, ?, ?)';
-    await db.run(sql, [
+  // 4. Remove factory/demo features if present (never re-seed demo features)
+  await db.run(
+    'DELETE FROM features WHERE "title" IN (?, ?, ?, ?)',
+    [
       'Garajes & Tuning Avanzado',
-      'Guarda tus vehículos en propiedades privadas, modifica cada componente estético y mecánico con piezas exclusivas.',
-      'car',
-      'copper',
-      1,
-    ]);
-    await db.run(sql, [
       'Economía Realista',
-      'Sistema bancario con préstamos, inversiones empresariales, cajeros automáticos interactivos y salarios por hora.',
-      'vault',
-      'emerald',
-      2,
-    ]);
-    await db.run(sql, [
       'Facciones & Bandas',
-      'LSPD, FBI, EMS y poderosas mafias ilegales luchan por el control territorial de Los Santos y San Fierro.',
-      'masks',
-      'blue',
-      3,
-    ]);
-    await db.run(sql, [
       'Soporte In-Game & Bots',
-      'Sistema de reportes integrado y bots automatizados en Discord para reportes, sanciones y verificación instantánea.',
-      'headset',
-      'amber',
-      4,
-    ]);
-  }
+    ]
+  );
 
   // 5. Remove factory/demo staff if present (never re-seed demo staff)
   await db.run(
