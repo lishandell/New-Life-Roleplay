@@ -349,41 +349,47 @@ export function HomePage({ data, onToast }) {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {staff.map((member) => {
-            const style = ACCENT_STYLES[member.color] || ACCENT_STYLES.copper;
-            const initials = member.name.slice(0, 2).toUpperCase();
-            return (
-              <div
-                key={member.id}
-                className="glass-card p-5 rounded-2xl text-center space-y-3"
-              >
-                {member.avatarUrl ? (
-                  <img
-                    src={member.avatarUrl}
-                    alt={member.name}
-                    className={`w-20 h-20 rounded-2xl mx-auto border-2 ${style.border} object-cover`}
-                  />
-                ) : (
-                  <div
-                    className={`w-20 h-20 rounded-2xl mx-auto border-2 ${style.border} bg-nl-700 flex items-center justify-center text-xl font-black ${style.text}`}
-                  >
-                    {initials}
+        {staff.length === 0 ? (
+          <div className="glass-card rounded-2xl p-10 text-center text-gray-400 text-sm">
+            Aún no se han agregado miembros del Staff.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {staff.map((member) => {
+              const style = ACCENT_STYLES[member.color] || ACCENT_STYLES.copper;
+              const initials = member.name.slice(0, 2).toUpperCase();
+              return (
+                <div
+                  key={member.id}
+                  className="glass-card p-5 rounded-2xl text-center space-y-3"
+                >
+                  {member.avatarUrl ? (
+                    <img
+                      src={member.avatarUrl}
+                      alt={member.name}
+                      className={`w-20 h-20 rounded-2xl mx-auto border-2 ${style.border} object-cover`}
+                    />
+                  ) : (
+                    <div
+                      className={`w-20 h-20 rounded-2xl mx-auto border-2 ${style.border} bg-nl-700 flex items-center justify-center text-xl font-black ${style.text}`}
+                    >
+                      {initials}
+                    </div>
+                  )}
+                  <div>
+                    <h4 className="font-bold text-white text-sm">{member.name}</h4>
+                    <span className={`text-xs font-semibold ${style.text}`}>
+                      {member.role}
+                    </span>
                   </div>
-                )}
-                <div>
-                  <h4 className="font-bold text-white text-sm">{member.name}</h4>
-                  <span className={`text-xs font-semibold ${style.text}`}>
-                    {member.role}
+                  <span className="inline-block bg-nl-800 text-gray-300 text-[10px] px-2.5 py-1 rounded-full">
+                    {member.status}
                   </span>
                 </div>
-                <span className="inline-block bg-nl-800 text-gray-300 text-[10px] px-2.5 py-1 rounded-full">
-                  {member.status}
-                </span>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </section>
 
       <NewsModal item={selectedNews} onClose={() => setSelectedNews(null)} />

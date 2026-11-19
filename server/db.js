@@ -232,53 +232,15 @@ async function seedDefaults() {
     );
   }
 
-  // 3. Seed news if empty
-  const newsRow = await db.get('SELECT COUNT(*) as count FROM news');
-  if (Number(newsRow?.count || 0) === 0) {
-    const insertNewsSql = `
-      INSERT INTO news ("title", "summary", "content", "category", "badge", "icon", "accentColor", "publishedAt", "isPublished", "isFeatured", "createdAt", "updatedAt")
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?)
-    `;
-    await db.run(insertNewsSql, [
+  // 3. Remove factory/demo news if present (never re-seed demo news)
+  await db.run(
+    'DELETE FROM news WHERE "title" IN (?, ?, ?)',
+    [
       'Actualización Verano 2026: Nuevos Garajes & Tuning',
-      'Hemos añadido más de 40 nuevos vehículos personalizables, sistema de compra de garajes independientes y rebalanceo de trabajos legales.',
-      'Esta actualización mayor trae una renovación completa del sistema automotriz en Los Santos y San Fierro:\n\n• +40 vehículos nuevos con físicas ajustadas y sonidos propios.\n• Garajes privados instanciados: compra propiedades para almacenar hasta 12 vehículos.\n• Taller de Tuning avanzado: suspensión hidráulica, turbos, neones y mapeo de motor.\n• Rebalanceo económico en trabajos de camionero, minero y pescador.',
-      'update',
-      'Parche v3.8',
-      'rocket',
-      'copper',
-      '15 Jun 2026',
-      1,
-      now,
-      now,
-    ]);
-    await db.run(insertNewsSql, [
       'Gran Evento de Carreras Clandestinas en Las Venturas',
-      'Participa por $2,000,000 en premios in-game y coches exclusivos. Inscripciones abiertas en el canal de discord oficial.',
-      'Prepárate para la noche más rápida del año en Las Venturas.\n\n• Premios: $2,000,000 repartidos entre el Top 3 + vehículo edición limitada.\n• Categorías: Deportivos, Muscle y Drift.\n• Seguridad IC: La LSPD estará patrullando, ¡cuidado con las emboscadas!\n• Inscripciones abiertas hasta el viernes mediante nuestro Discord oficial.',
-      'event',
-      'Evento Global',
-      'trophy',
-      'amber',
-      '10 Jun 2026',
-      0,
-      now,
-      now,
-    ]);
-    await db.run(insertNewsSql, [
       'Mejoras en el Sistema Anti-Cheat y Verificación 2FA',
-      'Implementación de escáner avanzado en tiempo real para garantizar una experiencia de juego limpia, justa y libre de hackers.',
-      'La seguridad y la integridad del rol son nuestra prioridad.\n\n• Nuevo módulo anti-inyección y detección de modificaciones ilegales en tiempo real.\n• Verificación 2FA opcional vinculada a tu cuenta de Discord.\n• Logs automáticos de transacciones sospechosas para el equipo de administración.',
-      'security',
-      'Seguridad',
-      'shield',
-      'emerald',
-      '02 Jun 2026',
-      0,
-      now,
-      now,
-    ]);
-  }
+    ]
+  );
 
   // 4. Seed features if empty
   const featRow = await db.get('SELECT COUNT(*) as count FROM features');
@@ -315,16 +277,11 @@ async function seedDefaults() {
     ]);
   }
 
-  // 5. Seed staff if empty
-  const staffRow = await db.get('SELECT COUNT(*) as count FROM staff');
-  if (Number(staffRow?.count || 0) === 0) {
-    const sql =
-      'INSERT INTO staff ("name", "role", "status", "color", "avatarUrl", "sortOrder") VALUES (?, ?, ?, ?, ?, ?)';
-    await db.run(sql, ['Zack_Miller', 'Fundador & Developer', 'Activo en Discord', 'copper', '', 1]);
-    await db.run(sql, ['Kira_Yagami', 'Admin General', 'En Juego', 'blue', '', 2]);
-    await db.run(sql, ['Lucas_Gomez', 'Moderador Líder', 'Activo en Discord', 'emerald', '', 3]);
-    await db.run(sql, ['Matrix_01', 'Scripter MTA', 'En Juego', 'amber', '', 4]);
-  }
+  // 5. Remove factory/demo staff if present (never re-seed demo staff)
+  await db.run(
+    'DELETE FROM staff WHERE "name" IN (?, ?, ?, ?)',
+    ['Zack_Miller', 'Kira_Yagami', 'Lucas_Gomez', 'Matrix_01']
+  );
 
   // 6. Seed rules if empty
   const rulesRow = await db.get('SELECT COUNT(*) as count FROM rules');

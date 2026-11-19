@@ -18,11 +18,13 @@ import {
   ArrowLeft,
   KeyRound,
   Save,
+  Radio,
 } from 'lucide-react';
 import { api } from '../api/client';
 
 const TABS = [
   { id: 'overview', label: 'Resumen', icon: LayoutDashboard },
+  { id: 'mta-status', label: 'Estado & Discord Bot', icon: Radio },
   { id: 'news', label: 'Noticias & Parches', icon: Newspaper },
   { id: 'whitelist', label: 'Whitelist', icon: FileCheck2 },
   { id: 'features', label: 'Características', icon: Sparkles },
@@ -265,6 +267,14 @@ export function AdminPortal({ discordUser, onToast, onSiteRefresh }) {
             <>
               {tab === 'overview' && (
                 <OverviewTab stats={dashboard?.stats} onNavigate={setTab} />
+              )}
+              {tab === 'mta-status' && (
+                <SettingsManager
+                  settings={dashboard?.settings || {}}
+                  onRefresh={refreshAll}
+                  onToast={onToast}
+                  onlyMtaDiscord={true}
+                />
               )}
               {tab === 'news' && (
                 <NewsManager
@@ -1057,7 +1067,7 @@ function RulesManager({ items, onRefresh, onToast }) {
   );
 }
 
-function SettingsManager({ settings, onRefresh, onToast }) {
+function SettingsManager({ settings, onRefresh, onToast, onlyMtaDiscord = false }) {
   const [form, setForm] = useState(settings);
   const [saving, setSaving] = useState(false);
   const [checkingMta, setCheckingMta] = useState(false);
@@ -1141,9 +1151,11 @@ function SettingsManager({ settings, onRefresh, onToast }) {
   return (
     <div className="space-y-6">
       <form onSubmit={handleSave} className="glass-card rounded-2xl p-6 space-y-5">
-        <h2 className="text-base font-bold text-white">Configuración General del Sitio</h2>
+        {!onlyMtaDiscord && (
+          <>
+            <h2 className="text-base font-bold text-white">Configuración General del Sitio</h2>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
           <div>
             <label className="block text-gray-400 mb-1">Nombre del Servidor</label>
             <input
@@ -1332,9 +1344,12 @@ function SettingsManager({ settings, onRefresh, onToast }) {
               </div>
             </div>
           </div>
+            </div>
+          </>
+        )}
 
           {/* MONITOR MTA & AUTO-ESTATUS DISCORD */}
-          <div className="border-t border-gray-800 pt-5 space-y-4">
+          <div className={`${onlyMtaDiscord ? '' : 'border-t border-gray-800 pt-5'} space-y-4 text-xs`}>
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
                 <h3 className="text-sm font-bold text-white">
@@ -1540,7 +1555,6 @@ function SettingsManager({ settings, onRefresh, onToast }) {
               </div>
             </div>
           </div>
-        </div>
 
         <button
           type="submit"
@@ -1552,7 +1566,8 @@ function SettingsManager({ settings, onRefresh, onToast }) {
         </button>
       </form>
 
-      <form onSubmit={handlePasswordChange} className="glass-card rounded-2xl p-6 space-y-4">
+      {!onlyMtaDiscord && (
+        <form onSubmit={handlePasswordChange} className="glass-card rounded-2xl p-6 space-y-4">
         <h2 className="text-base font-bold text-white flex items-center gap-2">
           <KeyRound className="w-4 h-4 text-nl-red" />
           Cambiar Contraseña de Administrador
@@ -1585,6 +1600,7 @@ function SettingsManager({ settings, onRefresh, onToast }) {
           Actualizar Contraseña
         </button>
       </form>
+      )}
     </div>
   );
 }
