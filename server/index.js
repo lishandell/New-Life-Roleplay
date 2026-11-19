@@ -6,6 +6,7 @@ import { initDatabase } from './db.js';
 import publicRoutes from './routes/public.js';
 import adminRoutes from './routes/admin.js';
 import discordRoutes from './routes/discord.js';
+import { startMtaStatusScheduler } from './utils/mtaQuery.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, '..');
@@ -28,6 +29,7 @@ if (fs.existsSync(envPath)) {
 }
 
 await initDatabase();
+startMtaStatusScheduler();
 
 const app = express();
 app.set('trust proxy', 1);

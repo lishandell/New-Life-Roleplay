@@ -14,6 +14,10 @@ import {
   notifyNewsPublished,
   notifyWhitelistResult,
 } from '../utils/discordNotify.js';
+import {
+  refreshLiveMtaStatus,
+  sendServerStatusEmbedToDiscord,
+} from '../utils/mtaQuery.js';
 
 const router = express.Router();
 
@@ -118,6 +122,19 @@ router.put('/settings', requireAdmin, async (req, res) => {
         [key, String(value ?? '')]
       );
     }
+  }
+  res.json({ ok: true });
+});
+
+router.post('/mta/check', requireAdmin, async (_req, res) => {
+  const status = await refreshLiveMtaStatus();
+  res.json(status);
+});
+
+router.post('/discord/send-status', requireAdmin, async (_req, res) => {
+  const result = await sendServerStatusEmbedToDiscord();
+  if (!result.ok) {
+    return res.status(400).json({ error: result.error });
   }
   res.json({ ok: true });
 });

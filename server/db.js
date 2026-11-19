@@ -215,6 +215,14 @@ async function seedDefaults() {
     discordStaffRoleIds: '',
     discordVipRoleIds: '',
     discordWhitelistRoleIds: '',
+    autoStatusEnabled: 'true',
+    autoDiscordStatusEnabled: 'false',
+    discordStatusIntervalMinutes: '30',
+    discordStatusWebhookUrl: '',
+    statusEmbedName: 'New Life Roleplay | Roleplay | Español | Latino',
+    statusEmbedMode: 'Roleplay',
+    statusEmbedAdmin: 'New Life Staff',
+    statusEmbedPlayersText: '',
   };
 
   for (const [k, v] of Object.entries(defaultSettings)) {

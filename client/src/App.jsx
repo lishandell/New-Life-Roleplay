@@ -53,6 +53,8 @@ function AppShell() {
 
   useEffect(() => {
     loadSiteData();
+    const timer = setInterval(loadSiteData, 60000);
+    return () => clearInterval(timer);
   }, [loadSiteData]);
 
   useEffect(() => {

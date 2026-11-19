@@ -1060,12 +1060,58 @@ function RulesManager({ items, onRefresh, onToast }) {
 function SettingsManager({ settings, onRefresh, onToast }) {
   const [form, setForm] = useState(settings);
   const [saving, setSaving] = useState(false);
+  const [checkingMta, setCheckingMta] = useState(false);
+  const [sendingStatus, setSendingStatus] = useState(false);
 
   const [pwForm, setPwForm] = useState({ currentPassword: '', newPassword: '' });
 
   useEffect(() => {
     setForm(settings);
   }, [settings]);
+
+  const handleCheckMtaNow = async () => {
+    setCheckingMta(true);
+    try {
+      await api.updateSettings(form);
+      const res = await api.checkMtaLive();
+      if (res.online) {
+        onToast(
+          'Servidor MTA en Línea',
+          `Detectado activo en ${res.host}:${res.port} (${res.playersOnline ?? 0}/${res.playersMax ?? 0} jugadores).`,
+          'success'
+        );
+      } else {
+        onToast(
+          'Servidor MTA Apagado / Sin Respuesta',
+          `No hubo respuesta UDP ASE en ${res.host}:${res.asePort}. Estado marcado como Apagado.`,
+          'info'
+        );
+      }
+      await onRefresh();
+    } catch (err) {
+      onToast('Error', err.message, 'error');
+    } finally {
+      setCheckingMta(false);
+    }
+  };
+
+  const handleSendDiscordStatusNow = async () => {
+    setSendingStatus(true);
+    try {
+      await api.updateSettings(form);
+      await api.sendDiscordStatusNow();
+      onToast(
+        'Enviado a Discord',
+        'El mensaje de Información del Servidor se envió al canal de Discord.',
+        'success'
+      );
+      await onRefresh();
+    } catch (err) {
+      onToast('Error al enviar', err.message, 'error');
+    } finally {
+      setSendingStatus(false);
+    }
+  };
 
   const handleSave = async (e) => {
     e.preventDefault();
@@ -1283,6 +1329,214 @@ function SettingsManager({ settings, onRefresh, onToast }) {
                   }
                   className="w-full bg-nl-900 border border-gray-700 rounded-xl px-3 py-2 text-white font-mono"
                 />
+              </div>
+            </div>
+          </div>
+
+          {/* MONITOR MTA & AUTO-ESTATUS DISCORD */}
+          <div className="border-t border-gray-800 pt-5 space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <h3 className="text-sm font-bold text-white">
+                  Detector Automático MTA:SA & Auto-Estatus en Discord
+                </h3>
+                <p className="text-[11px] text-gray-400">
+                  Detecta si el servidor está Abierto o Apagado directamente desde la IP y envía el embed automático a Discord.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={handleCheckMtaNow}
+                  disabled={checkingMta}
+                  className="bg-nl-700 hover:bg-nl-600 border border-gray-600 text-white text-xs font-bold px-3.5 py-2 rounded-xl transition-all"
+                >
+                  {checkingMta ? 'Consultando IP...' : '🔍 Probar IP MTA Ahora'}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSendDiscordStatusNow}
+                  disabled={sendingStatus}
+                  className="bg-[#5865F2] hover:bg-[#4752C4] text-white text-xs font-bold px-3.5 py-2 rounded-xl transition-all"
+                >
+                  {sendingStatus ? 'Enviando...' : '📤 Enviar Estatus a Discord Ahora'}
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label className="block text-gray-400 mb-1">
+                  Detección Automática por IP
+                </label>
+                <select
+                  value={form.autoStatusEnabled || 'true'}
+                  onChange={(e) =>
+                    setForm({ ...form, autoStatusEnabled: e.target.value })
+                  }
+                  className="w-full bg-nl-900 border border-gray-700 rounded-xl px-3 py-2 text-white"
+                >
+                  <option value="true">Activada (Consulta IP cada 1 min)</option>
+                  <option value="false">Manual (Usar estado manual arriba)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-gray-400 mb-1">
+                  Auto-Mensaje en Discord
+                </label>
+                <select
+                  value={form.autoDiscordStatusEnabled || 'false'}
+                  onChange={(e) =>
+                    setForm({ ...form, autoDiscordStatusEnabled: e.target.value })
+                  }
+                  className="w-full bg-nl-900 border border-gray-700 rounded-xl px-3 py-2 text-white"
+                >
+                  <option value="true">Activado (Enviar en automático)</option>
+                  <option value="false">Desactivado</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-gray-400 mb-1">
+                  Frecuencia de Envío a Discord
+                </label>
+                <select
+                  value={form.discordStatusIntervalMinutes || '30'}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      discordStatusIntervalMinutes: e.target.value,
+                    })
+                  }
+                  className="w-full bg-nl-900 border border-gray-700 rounded-xl px-3 py-2 text-white"
+                >
+                  <option value="15">Cada 15 minutos</option>
+                  <option value="30">Cada 30 minutos (Media hora)</option>
+                  <option value="60">Cada 60 minutos (1 hora)</option>
+                  <option value="120">Cada 2 horas</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-gray-400 mb-1">
+                Discord Webhook URL para Canal de Estado del Servidor
+              </label>
+              <input
+                type="url"
+                placeholder="https://discord.com/api/webhooks/..."
+                value={form.discordStatusWebhookUrl || ''}
+                onChange={(e) =>
+                  setForm({ ...form, discordStatusWebhookUrl: e.target.value })
+                }
+                className="w-full bg-nl-900 border border-gray-700 rounded-xl px-3 py-2 text-white font-mono"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-gray-400 mb-1">
+                  Nombre en la tarjeta (📰 Nombre)
+                </label>
+                <input
+                  placeholder="New Life Roleplay | Roleplay | Español | Latino"
+                  value={form.statusEmbedName || ''}
+                  onChange={(e) =>
+                    setForm({ ...form, statusEmbedName: e.target.value })
+                  }
+                  className="w-full bg-nl-900 border border-gray-700 rounded-xl px-3 py-2 text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-gray-400 mb-1">
+                  Modo (🎮 Modo)
+                </label>
+                <input
+                  placeholder="Roleplay"
+                  value={form.statusEmbedMode || ''}
+                  onChange={(e) =>
+                    setForm({ ...form, statusEmbedMode: e.target.value })
+                  }
+                  className="w-full bg-nl-900 border border-gray-700 rounded-xl px-3 py-2 text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-gray-400 mb-1">
+                  Administración (💸 Administración)
+                </label>
+                <input
+                  placeholder="New Life Staff"
+                  value={form.statusEmbedAdmin || ''}
+                  onChange={(e) =>
+                    setForm({ ...form, statusEmbedAdmin: e.target.value })
+                  }
+                  className="w-full bg-nl-900 border border-gray-700 rounded-xl px-3 py-2 text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-gray-400 mb-1">
+                  Texto en Jugadores (dejar vacío para mostrar 0/500 real)
+                </label>
+                <input
+                  placeholder="ej. ENTRA AL SERVIDOR A VERLO JAJAJA"
+                  value={form.statusEmbedPlayersText || ''}
+                  onChange={(e) =>
+                    setForm({ ...form, statusEmbedPlayersText: e.target.value })
+                  }
+                  className="w-full bg-nl-900 border border-gray-700 rounded-xl px-3 py-2 text-white"
+                />
+              </div>
+            </div>
+
+            {/* Vista previa idéntica al embed de Discord */}
+            <div className="bg-[#2b2d31] border-l-4 border-emerald-500 rounded-lg p-4 space-y-3 text-xs max-w-xl">
+              <div className="font-bold text-white text-sm">
+                💻 Información del Servidor
+              </div>
+              <div>
+                <div className="font-bold text-gray-200 mb-1">📰 Nombre</div>
+                <code className="bg-[#1e1f22] text-gray-200 px-2 py-1 rounded block">
+                  {form.statusEmbedName ||
+                    `${form.serverName || 'New Life Roleplay'} | Roleplay | Español | Latino`}
+                </code>
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <div className="font-bold text-gray-200 mb-1">🌍 IP</div>
+                  <code className="bg-[#1e1f22] text-gray-200 px-2 py-0.5 rounded inline-block">
+                    {form.serverIp || '172.96.140.62:7323'}
+                  </code>
+                </div>
+                <div>
+                  <div className="font-bold text-gray-200 mb-1">🎮 Modo</div>
+                  <code className="bg-[#1e1f22] text-gray-200 px-2 py-0.5 rounded inline-block">
+                    {form.statusEmbedMode || 'Roleplay'}
+                  </code>
+                </div>
+                <div>
+                  <div className="font-bold text-gray-200 mb-1">
+                    {form.serverStatus === 'online' ? '🟢' : '🔴'} Estado
+                  </div>
+                  <code className="bg-[#1e1f22] text-gray-200 px-2 py-0.5 rounded inline-block">
+                    {form.serverStatus === 'online' ? 'Abierto' : 'Apagado'}
+                  </code>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <div className="font-bold text-gray-200 mb-1">👥 Jugadores</div>
+                  <span className="text-gray-200">
+                    {form.statusEmbedPlayersText ||
+                      `${form.playersOnline || 0} / ${form.playersMax || 500}`}
+                  </span>
+                </div>
+                <div>
+                  <div className="font-bold text-gray-200 mb-1">💸 Administración</div>
+                  <code className="bg-[#1e1f22] text-gray-200 px-2 py-0.5 rounded inline-block">
+                    {form.statusEmbedAdmin || 'New Life Staff'}
+                  </code>
+                </div>
               </div>
             </div>
           </div>

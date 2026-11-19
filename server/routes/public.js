@@ -12,7 +12,8 @@ async function getPublicSettings() {
   for (const row of rows) {
     if (
       row.key === 'discordWebhookUrl' ||
-      row.key === 'discordNewsWebhookUrl'
+      row.key === 'discordNewsWebhookUrl' ||
+      row.key === 'discordStatusWebhookUrl'
     ) {
       continue;
     }

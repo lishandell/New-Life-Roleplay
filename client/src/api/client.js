@@ -50,6 +50,10 @@ export const api = {
       method: 'PUT',
       body: JSON.stringify(settings),
     }),
+  checkMtaLive: () =>
+    request('/api/admin/mta/check', { method: 'POST' }),
+  sendDiscordStatusNow: () =>
+    request('/api/admin/discord/send-status', { method: 'POST' }),
 
   createNews: (item) =>
     request('/api/admin/news', { method: 'POST', body: JSON.stringify(item) }),

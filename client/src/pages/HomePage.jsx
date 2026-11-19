@@ -61,14 +61,23 @@ export function HomePage({ data, onToast }) {
               className={`w-2 h-2 rounded-full ${
                 settings.serverStatus === 'online'
                   ? 'bg-emerald-500 animate-pulse'
-                  : 'bg-amber-400'
+                  : settings.serverStatus === 'maintenance'
+                  ? 'bg-amber-400'
+                  : 'bg-red-500'
               }`}
             />
             <span>
-              {settings.serverStatus === 'online' ? 'Servidor Activo' : 'Mantenimiento'}{' '}
+              {settings.serverStatus === 'online'
+                ? 'Servidor Activo'
+                : settings.serverStatus === 'maintenance'
+                ? 'Mantenimiento'
+                : 'Servidor Apagado'}{' '}
               •{' '}
               <strong className="text-white">
-                {settings.playersOnline || 468} / {settings.playersMax || 500}
+                {settings.serverStatus === 'offline'
+                  ? 0
+                  : settings.playersOnline || 0}{' '}
+                / {settings.playersMax || 500}
               </strong>{' '}
               Jugadores en línea
             </span>
