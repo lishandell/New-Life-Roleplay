@@ -27,7 +27,7 @@ if (fs.existsSync(envPath)) {
   }
 }
 
-initDatabase();
+await initDatabase();
 
 const app = express();
 app.set('trust proxy', 1);
@@ -56,5 +56,9 @@ if (fs.existsSync(clientDist)) {
 }
 
 app.listen(PORT, () => {
-  console.log(`[New Life RP] Servidor backend activo en http://localhost:${PORT}`);
+  console.log(
+    `[New Life RP] Servidor backend activo en http://localhost:${PORT} (DB: ${
+      process.env.DATABASE_URL ? 'PostgreSQL' : 'SQLite local'
+    })`
+  );
 });

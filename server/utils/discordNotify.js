@@ -1,7 +1,7 @@
 import { db } from '../db.js';
 
-export function getSetting(key) {
-  const row = db.prepare('SELECT value FROM settings WHERE key = ?').get(key);
+export async function getSetting(key) {
+  const row = await db.get('SELECT "value" FROM settings WHERE "key" = ?', [key]);
   return row?.value || '';
 }
 
@@ -33,7 +33,7 @@ export async function sendDiscordEmbed(webhookUrl, embed) {
 
 export async function notifyNewsPublished(newsItem) {
   const webhookUrl =
-    getSetting('discordNewsWebhookUrl') ||
+    (await getSetting('discordNewsWebhookUrl')) ||
     process.env.DISCORD_NEWS_WEBHOOK_URL ||
     '';
   if (!webhookUrl) return;
@@ -65,7 +65,7 @@ export async function notifyNewsPublished(newsItem) {
 
 export async function notifyWhitelistResult(app) {
   const webhookUrl =
-    getSetting('discordWebhookUrl') || process.env.DISCORD_WEBHOOK_URL || '';
+    (await getSetting('discordWebhookUrl')) || process.env.DISCORD_WEBHOOK_URL || '';
   if (!webhookUrl) return;
 
   const approved = app.status === 'approved';
@@ -93,7 +93,7 @@ export async function assignDiscordWhitelistRole(discordId) {
   const botToken = process.env.DISCORD_BOT_TOKEN;
   const guildId = process.env.DISCORD_GUILD_ID;
   const roleIds = parseIdList(
-    getSetting('discordWhitelistRoleIds') || process.env.DISCORD_WHITELIST_ROLE_IDS
+    (await getSetting('discordWhitelistRoleIds')) || process.env.DISCORD_WHITELIST_ROLE_IDS
   );
 
   if (!botToken || !guildId || !discordId || roleIds.length === 0) {

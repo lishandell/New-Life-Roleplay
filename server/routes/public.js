@@ -6,43 +6,37 @@ import { getSetting, sendDiscordEmbed } from '../utils/discordNotify.js';
 
 const router = express.Router();
 
-function getPublicSettings() {
-  const rows = db.prepare('SELECT key, value FROM settings').all();
+async function getPublicSettings() {
+  const rows = await db.all('SELECT "key", "value" FROM settings');
   const settings = {};
   for (const row of rows) {
     if (
       row.key === 'discordWebhookUrl' ||
       row.key === 'discordNewsWebhookUrl'
     ) {
-      continue; // Never expose webhook URLs publicly
+      continue;
     }
     settings[row.key] = row.value;
   }
   return settings;
 }
 
-router.get('/site-data', (_req, res) => {
-  const settings = getPublicSettings();
-  const news = db
-    .prepare(
-      'SELECT * FROM news WHERE isPublished = 1 ORDER BY isFeatured DESC, id DESC'
-    )
-    .all();
-  const features = db
-    .prepare('SELECT * FROM features ORDER BY sortOrder ASC, id ASC')
-    .all();
-  const staff = db
-    .prepare('SELECT * FROM staff ORDER BY sortOrder ASC, id ASC')
-    .all();
-  const rules = db
-    .prepare('SELECT * FROM rules ORDER BY sortOrder ASC, id ASC')
-    .all();
+router.get('/site-data', async (_req, res) => {
+  const [settings, news, features, staff, rules] = await Promise.all([
+    getPublicSettings(),
+    db.all(
+      'SELECT * FROM news WHERE "isPublished" = 1 ORDER BY "isFeatured" DESC, "id" DESC'
+    ),
+    db.all('SELECT * FROM features ORDER BY "sortOrder" ASC, "id" ASC'),
+    db.all('SELECT * FROM staff ORDER BY "sortOrder" ASC, "id" ASC'),
+    db.all('SELECT * FROM rules ORDER BY "sortOrder" ASC, "id" ASC'),
+  ]);
 
   res.json({ settings, news, features, staff, rules });
 });
 
 router.post('/whitelist', async (req, res) => {
-  const settings = getPublicSettings();
+  const settings = await getPublicSettings();
   if (settings.whitelistEnabled !== 'true') {
     return res
       .status(403)
@@ -89,28 +83,28 @@ router.post('/whitelist', async (req, res) => {
     .toUpperCase()}`;
   const now = new Date().toISOString();
 
-  db.prepare(
+  await db.insert(
     `INSERT INTO whitelist_applications
-    (trackingCode, discordId, discordTag, age, country, mtaSerial, characterName, characterBackstory, rpConcepts, scenarioAnswer, status, createdAt, updatedAt)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)`
-  ).run(
-    trackingCode,
-    finalDiscordId,
-    finalDiscordTag,
-    parsedAge,
-    country.trim(),
-    mtaSerial.trim(),
-    characterName.trim(),
-    characterBackstory.trim(),
-    rpConcepts.trim(),
-    scenarioAnswer.trim(),
-    now,
-    now
+    ("trackingCode", "discordId", "discordTag", "age", "country", "mtaSerial", "characterName", "characterBackstory", "rpConcepts", "scenarioAnswer", "status", "createdAt", "updatedAt")
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)`,
+    [
+      trackingCode,
+      finalDiscordId,
+      finalDiscordTag,
+      parsedAge,
+      country.trim(),
+      mtaSerial.trim(),
+      characterName.trim(),
+      characterBackstory.trim(),
+      rpConcepts.trim(),
+      scenarioAnswer.trim(),
+      now,
+      now,
+    ]
   );
 
-  // Optional Discord webhook notification
   const webhookUrl =
-    getSetting('discordWebhookUrl') || process.env.DISCORD_WEBHOOK_URL || '';
+    (await getSetting('discordWebhookUrl')) || process.env.DISCORD_WEBHOOK_URL || '';
   if (webhookUrl) {
     await sendDiscordEmbed(webhookUrl, {
       title: '📋 Nueva Solicitud de Whitelist',
@@ -136,30 +130,28 @@ router.post('/whitelist', async (req, res) => {
   });
 });
 
-router.get('/whitelist/my-applications', (req, res) => {
+router.get('/whitelist/my-applications', async (req, res) => {
   const discordUser = getDiscordUserFromRequest(req);
   if (!discordUser) {
     return res.json([]);
   }
-  const apps = db
-    .prepare(
-      'SELECT trackingCode, characterName, status, staffNote, createdAt, updatedAt FROM whitelist_applications WHERE discordId = ? ORDER BY id DESC'
-    )
-    .all(discordUser.discordId);
+  const apps = await db.all(
+    'SELECT "trackingCode", "characterName", "status", "staffNote", "createdAt", "updatedAt" FROM whitelist_applications WHERE "discordId" = ? ORDER BY "id" DESC',
+    [discordUser.discordId]
+  );
   res.json(apps);
 });
 
-router.get('/whitelist/status', (req, res) => {
+router.get('/whitelist/status', async (req, res) => {
   const code = String(req.query.code || '').trim().toUpperCase();
   if (!code) {
     return res.status(400).json({ error: 'Ingresa tu código de seguimiento (ej. NL-A1B2-C3D4).' });
   }
 
-  const app = db
-    .prepare(
-      'SELECT trackingCode, characterName, discordTag, status, staffNote, createdAt, updatedAt FROM whitelist_applications WHERE trackingCode = ?'
-    )
-    .get(code);
+  const app = await db.get(
+    'SELECT "trackingCode", "characterName", "discordTag", "status", "staffNote", "createdAt", "updatedAt" FROM whitelist_applications WHERE "trackingCode" = ?',
+    [code]
+  );
 
   if (!app) {
     return res.status(404).json({ error: 'No se encontró ninguna solicitud con ese código.' });

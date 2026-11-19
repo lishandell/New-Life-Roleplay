@@ -111,16 +111,16 @@ router.get('/discord/callback', async (req, res) => {
 
     // 4. Evaluate role permissions from DB settings or .env
     const adminRoles = parseIdList(
-      getSetting('discordAdminRoleIds') || process.env.DISCORD_ADMIN_ROLE_IDS
+      (await getSetting('discordAdminRoleIds')) || process.env.DISCORD_ADMIN_ROLE_IDS
     );
     const staffRoles = parseIdList(
-      getSetting('discordStaffRoleIds') || process.env.DISCORD_STAFF_ROLE_IDS
+      (await getSetting('discordStaffRoleIds')) || process.env.DISCORD_STAFF_ROLE_IDS
     );
     const vipRoles = parseIdList(
-      getSetting('discordVipRoleIds') || process.env.DISCORD_VIP_ROLE_IDS
+      (await getSetting('discordVipRoleIds')) || process.env.DISCORD_VIP_ROLE_IDS
     );
     const wlRoles = parseIdList(
-      getSetting('discordWhitelistRoleIds') ||
+      (await getSetting('discordWhitelistRoleIds')) ||
         process.env.DISCORD_WHITELIST_ROLE_IDS
     );
 

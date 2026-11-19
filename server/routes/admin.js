@@ -17,15 +17,16 @@ import {
 
 const router = express.Router();
 
-router.post('/login', (req, res) => {
+router.post('/login', async (req, res) => {
   const { username = '', password = '' } = req.body || {};
   if (!username.trim() || !password) {
     return res.status(400).json({ error: 'Usuario y contraseña requeridos.' });
   }
 
-  const user = db
-    .prepare('SELECT id, username, passwordHash, role FROM admin_users WHERE username = ?')
-    .get(username.trim());
+  const user = await db.get(
+    'SELECT "id", "username", "passwordHash", "role" FROM admin_users WHERE "username" = ?',
+    [username.trim()]
+  );
 
   if (!user || !verifyPassword(password, user.passwordHash)) {
     return res.status(401).json({ error: 'Credenciales inválidas.' });
@@ -60,7 +61,7 @@ router.get('/me', requireStaffOrAdmin, (req, res) => {
   });
 });
 
-router.post('/change-password', requireAdmin, (req, res) => {
+router.post('/change-password', requireAdmin, async (req, res) => {
   const { currentPassword = '', newPassword = '' } = req.body || {};
   if (!currentPassword || newPassword.length < 8) {
     return res.status(400).json({
@@ -68,34 +69,33 @@ router.post('/change-password', requireAdmin, (req, res) => {
     });
   }
 
-  const user = db
-    .prepare('SELECT id, passwordHash FROM admin_users WHERE id = ?')
-    .get(req.admin.id);
+  const user = await db.get(
+    'SELECT "id", "passwordHash" FROM admin_users WHERE "id" = ?',
+    [req.admin.id]
+  );
   if (!user || !verifyPassword(currentPassword, user.passwordHash)) {
     return res.status(401).json({ error: 'La contraseña actual no es correcta.' });
   }
 
-  db.prepare('UPDATE admin_users SET passwordHash = ? WHERE id = ?').run(
+  await db.run('UPDATE admin_users SET "passwordHash" = ? WHERE "id" = ?', [
     hashPassword(newPassword),
-    user.id
-  );
+    user.id,
+  ]);
   res.json({ ok: true, message: 'Contraseña actualizada correctamente.' });
 });
 
-router.get('/dashboard', requireStaffOrAdmin, (_req, res) => {
-  const settingRows = db.prepare('SELECT key, value FROM settings').all();
+router.get('/dashboard', requireStaffOrAdmin, async (_req, res) => {
+  const [settingRows, news, features, staff, rules, whitelist] = await Promise.all([
+    db.all('SELECT "key", "value" FROM settings'),
+    db.all('SELECT * FROM news ORDER BY "id" DESC'),
+    db.all('SELECT * FROM features ORDER BY "sortOrder" ASC, "id" ASC'),
+    db.all('SELECT * FROM staff ORDER BY "sortOrder" ASC, "id" ASC'),
+    db.all('SELECT * FROM rules ORDER BY "sortOrder" ASC, "id" ASC'),
+    db.all('SELECT * FROM whitelist_applications ORDER BY "id" DESC'),
+  ]);
+
   const settings = {};
   for (const r of settingRows) settings[r.key] = r.value;
-
-  const news = db.prepare('SELECT * FROM news ORDER BY id DESC').all();
-  const features = db
-    .prepare('SELECT * FROM features ORDER BY sortOrder ASC, id ASC')
-    .all();
-  const staff = db.prepare('SELECT * FROM staff ORDER BY sortOrder ASC, id ASC').all();
-  const rules = db.prepare('SELECT * FROM rules ORDER BY sortOrder ASC, id ASC').all();
-  const whitelist = db
-    .prepare('SELECT * FROM whitelist_applications ORDER BY id DESC')
-    .all();
 
   const stats = {
     totalNews: news.length,
@@ -109,14 +109,14 @@ router.get('/dashboard', requireStaffOrAdmin, (_req, res) => {
   res.json({ settings, news, features, staff, rules, whitelist, stats });
 });
 
-router.put('/settings', requireAdmin, (req, res) => {
+router.put('/settings', requireAdmin, async (req, res) => {
   const updates = req.body || {};
-  const upsert = db.prepare(
-    'INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value'
-  );
   for (const [key, value] of Object.entries(updates)) {
     if (typeof key === 'string' && key.length <= 64) {
-      upsert.run(key, String(value ?? ''));
+      await db.run(
+        'INSERT INTO settings ("key", "value") VALUES (?, ?) ON CONFLICT ("key") DO UPDATE SET "value" = excluded."value"',
+        [key, String(value ?? '')]
+      );
     }
   }
   res.json({ ok: true });
@@ -150,12 +150,10 @@ router.post('/news', requireAdmin, async (req, res) => {
       year: 'numeric',
     });
 
-  const info = db
-    .prepare(
-      `INSERT INTO news (title, summary, content, category, badge, icon, accentColor, publishedAt, isPublished, isFeatured, createdAt, updatedAt)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    )
-    .run(
+  const newId = await db.insert(
+    `INSERT INTO news ("title", "summary", "content", "category", "badge", "icon", "accentColor", "publishedAt", "isPublished", "isFeatured", "createdAt", "updatedAt")
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
       title.trim(),
       summary.trim(),
       (content || summary).trim(),
@@ -167,11 +165,12 @@ router.post('/news', requireAdmin, async (req, res) => {
       isPublished ? 1 : 0,
       isFeatured ? 1 : 0,
       now,
-      now
-    );
+      now,
+    ]
+  );
 
-  const created = db.prepare('SELECT * FROM news WHERE id = ?').get(info.lastInsertRowid);
-  if (created.isPublished === 1) {
+  const created = await db.get('SELECT * FROM news WHERE "id" = ?', [newId]);
+  if (created?.isPublished === 1) {
     notifyNewsPublished(created).catch(() => {});
   }
   res.status(201).json(created);
@@ -179,7 +178,7 @@ router.post('/news', requireAdmin, async (req, res) => {
 
 router.put('/news/:id', requireAdmin, async (req, res) => {
   const id = Number(req.params.id);
-  const existing = db.prepare('SELECT * FROM news WHERE id = ?').get(id);
+  const existing = await db.get('SELECT * FROM news WHERE "id" = ?', [id]);
   if (!existing) return res.status(404).json({ error: 'Noticia no encontrada.' });
 
   const {
@@ -196,53 +195,53 @@ router.put('/news/:id', requireAdmin, async (req, res) => {
   } = req.body || {};
 
   const now = new Date().toISOString();
-  db.prepare(
-    `UPDATE news SET title = ?, summary = ?, content = ?, category = ?, badge = ?, icon = ?, accentColor = ?, publishedAt = ?, isPublished = ?, isFeatured = ?, updatedAt = ? WHERE id = ?`
-  ).run(
-    title.trim(),
-    summary.trim(),
-    content.trim(),
-    category,
-    badge.trim(),
-    icon,
-    accentColor,
-    publishedAt.trim(),
-    isPublished ? 1 : 0,
-    isFeatured ? 1 : 0,
-    now,
-    id
+  await db.run(
+    `UPDATE news SET "title" = ?, "summary" = ?, "content" = ?, "category" = ?, "badge" = ?, "icon" = ?, "accentColor" = ?, "publishedAt" = ?, "isPublished" = ?, "isFeatured" = ?, "updatedAt" = ? WHERE "id" = ?`,
+    [
+      title.trim(),
+      summary.trim(),
+      content.trim(),
+      category,
+      badge.trim(),
+      icon,
+      accentColor,
+      publishedAt.trim(),
+      isPublished ? 1 : 0,
+      isFeatured ? 1 : 0,
+      now,
+      id,
+    ]
   );
 
-  const updated = db.prepare('SELECT * FROM news WHERE id = ?').get(id);
-  if (existing.isPublished === 0 && updated.isPublished === 1) {
+  const updated = await db.get('SELECT * FROM news WHERE "id" = ?', [id]);
+  if (existing.isPublished === 0 && updated?.isPublished === 1) {
     notifyNewsPublished(updated).catch(() => {});
   }
   res.json(updated);
 });
 
-router.delete('/news/:id', requireAdmin, (req, res) => {
-  db.prepare('DELETE FROM news WHERE id = ?').run(Number(req.params.id));
+router.delete('/news/:id', requireAdmin, async (req, res) => {
+  await db.run('DELETE FROM news WHERE "id" = ?', [Number(req.params.id)]);
   res.json({ ok: true });
 });
 
 // --- FEATURES CRUD ---
-router.post('/features', requireAdmin, (req, res) => {
+router.post('/features', requireAdmin, async (req, res) => {
   const { title = '', description = '', icon = 'car', color = 'copper', sortOrder = 0 } =
     req.body || {};
   if (!title.trim() || !description.trim()) {
     return res.status(400).json({ error: 'Título y descripción requeridos.' });
   }
-  const info = db
-    .prepare(
-      'INSERT INTO features (title, description, icon, color, sortOrder) VALUES (?, ?, ?, ?, ?)'
-    )
-    .run(title.trim(), description.trim(), icon, color, Number(sortOrder) || 0);
-  res.status(201).json(db.prepare('SELECT * FROM features WHERE id = ?').get(info.lastInsertRowid));
+  const newId = await db.insert(
+    'INSERT INTO features ("title", "description", "icon", "color", "sortOrder") VALUES (?, ?, ?, ?, ?)',
+    [title.trim(), description.trim(), icon, color, Number(sortOrder) || 0]
+  );
+  res.status(201).json(await db.get('SELECT * FROM features WHERE "id" = ?', [newId]));
 });
 
-router.put('/features/:id', requireAdmin, (req, res) => {
+router.put('/features/:id', requireAdmin, async (req, res) => {
   const id = Number(req.params.id);
-  const existing = db.prepare('SELECT * FROM features WHERE id = ?').get(id);
+  const existing = await db.get('SELECT * FROM features WHERE "id" = ?', [id]);
   if (!existing) return res.status(404).json({ error: 'Característica no encontrada.' });
 
   const {
@@ -253,20 +252,21 @@ router.put('/features/:id', requireAdmin, (req, res) => {
     sortOrder = existing.sortOrder,
   } = req.body || {};
 
-  db.prepare(
-    'UPDATE features SET title = ?, description = ?, icon = ?, color = ?, sortOrder = ? WHERE id = ?'
-  ).run(title.trim(), description.trim(), icon, color, Number(sortOrder) || 0, id);
+  await db.run(
+    'UPDATE features SET "title" = ?, "description" = ?, "icon" = ?, "color" = ?, "sortOrder" = ? WHERE "id" = ?',
+    [title.trim(), description.trim(), icon, color, Number(sortOrder) || 0, id]
+  );
 
-  res.json(db.prepare('SELECT * FROM features WHERE id = ?').get(id));
+  res.json(await db.get('SELECT * FROM features WHERE "id" = ?', [id]));
 });
 
-router.delete('/features/:id', requireAdmin, (req, res) => {
-  db.prepare('DELETE FROM features WHERE id = ?').run(Number(req.params.id));
+router.delete('/features/:id', requireAdmin, async (req, res) => {
+  await db.run('DELETE FROM features WHERE "id" = ?', [Number(req.params.id)]);
   res.json({ ok: true });
 });
 
 // --- STAFF CRUD ---
-router.post('/staff', requireAdmin, (req, res) => {
+router.post('/staff', requireAdmin, async (req, res) => {
   const {
     name = '',
     role = '',
@@ -278,17 +278,16 @@ router.post('/staff', requireAdmin, (req, res) => {
   if (!name.trim() || !role.trim()) {
     return res.status(400).json({ error: 'Nombre y rol requeridos.' });
   }
-  const info = db
-    .prepare(
-      'INSERT INTO staff (name, role, status, color, avatarUrl, sortOrder) VALUES (?, ?, ?, ?, ?, ?)'
-    )
-    .run(name.trim(), role.trim(), status.trim(), color, avatarUrl.trim(), Number(sortOrder) || 0);
-  res.status(201).json(db.prepare('SELECT * FROM staff WHERE id = ?').get(info.lastInsertRowid));
+  const newId = await db.insert(
+    'INSERT INTO staff ("name", "role", "status", "color", "avatarUrl", "sortOrder") VALUES (?, ?, ?, ?, ?, ?)',
+    [name.trim(), role.trim(), status.trim(), color, avatarUrl.trim(), Number(sortOrder) || 0]
+  );
+  res.status(201).json(await db.get('SELECT * FROM staff WHERE "id" = ?', [newId]));
 });
 
-router.put('/staff/:id', requireAdmin, (req, res) => {
+router.put('/staff/:id', requireAdmin, async (req, res) => {
   const id = Number(req.params.id);
-  const existing = db.prepare('SELECT * FROM staff WHERE id = ?').get(id);
+  const existing = await db.get('SELECT * FROM staff WHERE "id" = ?', [id]);
   if (!existing) return res.status(404).json({ error: 'Miembro no encontrado.' });
 
   const {
@@ -300,20 +299,21 @@ router.put('/staff/:id', requireAdmin, (req, res) => {
     sortOrder = existing.sortOrder,
   } = req.body || {};
 
-  db.prepare(
-    'UPDATE staff SET name = ?, role = ?, status = ?, color = ?, avatarUrl = ?, sortOrder = ? WHERE id = ?'
-  ).run(name.trim(), role.trim(), status.trim(), color, avatarUrl.trim(), Number(sortOrder) || 0, id);
+  await db.run(
+    'UPDATE staff SET "name" = ?, "role" = ?, "status" = ?, "color" = ?, "avatarUrl" = ?, "sortOrder" = ? WHERE "id" = ?',
+    [name.trim(), role.trim(), status.trim(), color, avatarUrl.trim(), Number(sortOrder) || 0, id]
+  );
 
-  res.json(db.prepare('SELECT * FROM staff WHERE id = ?').get(id));
+  res.json(await db.get('SELECT * FROM staff WHERE "id" = ?', [id]));
 });
 
-router.delete('/staff/:id', requireAdmin, (req, res) => {
-  db.prepare('DELETE FROM staff WHERE id = ?').run(Number(req.params.id));
+router.delete('/staff/:id', requireAdmin, async (req, res) => {
+  await db.run('DELETE FROM staff WHERE "id" = ?', [Number(req.params.id)]);
   res.json({ ok: true });
 });
 
 // --- RULES CRUD ---
-router.post('/rules', requireAdmin, (req, res) => {
+router.post('/rules', requireAdmin, async (req, res) => {
   const {
     category = 'General',
     title = '',
@@ -324,17 +324,16 @@ router.post('/rules', requireAdmin, (req, res) => {
   if (!title.trim() || !description.trim()) {
     return res.status(400).json({ error: 'Título y descripción requeridos.' });
   }
-  const info = db
-    .prepare(
-      'INSERT INTO rules (category, title, description, severity, sortOrder) VALUES (?, ?, ?, ?, ?)'
-    )
-    .run(category.trim(), title.trim(), description.trim(), severity, Number(sortOrder) || 0);
-  res.status(201).json(db.prepare('SELECT * FROM rules WHERE id = ?').get(info.lastInsertRowid));
+  const newId = await db.insert(
+    'INSERT INTO rules ("category", "title", "description", "severity", "sortOrder") VALUES (?, ?, ?, ?, ?)',
+    [category.trim(), title.trim(), description.trim(), severity, Number(sortOrder) || 0]
+  );
+  res.status(201).json(await db.get('SELECT * FROM rules WHERE "id" = ?', [newId]));
 });
 
-router.put('/rules/:id', requireAdmin, (req, res) => {
+router.put('/rules/:id', requireAdmin, async (req, res) => {
   const id = Number(req.params.id);
-  const existing = db.prepare('SELECT * FROM rules WHERE id = ?').get(id);
+  const existing = await db.get('SELECT * FROM rules WHERE "id" = ?', [id]);
   if (!existing) return res.status(404).json({ error: 'Regla no encontrada.' });
 
   const {
@@ -345,22 +344,23 @@ router.put('/rules/:id', requireAdmin, (req, res) => {
     sortOrder = existing.sortOrder,
   } = req.body || {};
 
-  db.prepare(
-    'UPDATE rules SET category = ?, title = ?, description = ?, severity = ?, sortOrder = ? WHERE id = ?'
-  ).run(category.trim(), title.trim(), description.trim(), severity, Number(sortOrder) || 0, id);
+  await db.run(
+    'UPDATE rules SET "category" = ?, "title" = ?, "description" = ?, "severity" = ?, "sortOrder" = ? WHERE "id" = ?',
+    [category.trim(), title.trim(), description.trim(), severity, Number(sortOrder) || 0, id]
+  );
 
-  res.json(db.prepare('SELECT * FROM rules WHERE id = ?').get(id));
+  res.json(await db.get('SELECT * FROM rules WHERE "id" = ?', [id]));
 });
 
-router.delete('/rules/:id', requireAdmin, (req, res) => {
-  db.prepare('DELETE FROM rules WHERE id = ?').run(Number(req.params.id));
+router.delete('/rules/:id', requireAdmin, async (req, res) => {
+  await db.run('DELETE FROM rules WHERE "id" = ?', [Number(req.params.id)]);
   res.json({ ok: true });
 });
 
 // --- WHITELIST REVIEW ---
 router.patch('/whitelist/:id', requireStaffOrAdmin, async (req, res) => {
   const id = Number(req.params.id);
-  const existing = db.prepare('SELECT * FROM whitelist_applications WHERE id = ?').get(id);
+  const existing = await db.get('SELECT * FROM whitelist_applications WHERE "id" = ?', [id]);
   if (!existing) return res.status(404).json({ error: 'Solicitud no encontrada.' });
 
   const { status, staffNote = '' } = req.body || {};
@@ -369,23 +369,24 @@ router.patch('/whitelist/:id', requireStaffOrAdmin, async (req, res) => {
   }
 
   const now = new Date().toISOString();
-  db.prepare(
-    'UPDATE whitelist_applications SET status = ?, staffNote = ?, reviewedBy = ?, updatedAt = ? WHERE id = ?'
-  ).run(status, staffNote.trim(), req.admin.username, now, id);
+  await db.run(
+    'UPDATE whitelist_applications SET "status" = ?, "staffNote" = ?, "reviewedBy" = ?, "updatedAt" = ? WHERE "id" = ?',
+    [status, staffNote.trim(), req.admin.username, now, id]
+  );
 
-  const updated = db.prepare('SELECT * FROM whitelist_applications WHERE id = ?').get(id);
+  const updated = await db.get('SELECT * FROM whitelist_applications WHERE "id" = ?', [id]);
   if (status === 'approved' || status === 'rejected') {
     notifyWhitelistResult(updated).catch(() => {});
   }
-  if (status === 'approved' && updated.discordId) {
+  if (status === 'approved' && updated?.discordId) {
     assignDiscordWhitelistRole(updated.discordId).catch(() => {});
   }
 
   res.json(updated);
 });
 
-router.delete('/whitelist/:id', requireAdmin, (req, res) => {
-  db.prepare('DELETE FROM whitelist_applications WHERE id = ?').run(Number(req.params.id));
+router.delete('/whitelist/:id', requireAdmin, async (req, res) => {
+  await db.run('DELETE FROM whitelist_applications WHERE "id" = ?', [Number(req.params.id)]);
   res.json({ ok: true });
 });
 
