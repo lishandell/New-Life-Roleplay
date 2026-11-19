@@ -11,7 +11,9 @@ import {
 } from '../auth.js';
 import {
   assignDiscordWhitelistRole,
+  notifyFactionResult,
   notifyNewsPublished,
+  notifySupportResult,
   notifyWhitelistResult,
 } from '../utils/discordNotify.js';
 import {
@@ -531,7 +533,14 @@ router.patch('/faction-applications/:id', requireStaffOrAdmin, async (req, res) 
     'UPDATE faction_applications SET "status" = ?, "staffNote" = ?, "reviewedBy" = ?, "updatedAt" = ? WHERE "id" = ?',
     [status, staffNote.trim(), req.admin.username, now, id]
   );
-  res.json(await db.get('SELECT * FROM faction_applications WHERE "id" = ?', [id]));
+  const updated = await db.get(
+    'SELECT * FROM faction_applications WHERE "id" = ?',
+    [id]
+  );
+  if (status === 'approved' || status === 'rejected') {
+    notifyFactionResult(updated).catch(() => {});
+  }
+  res.json(updated);
 });
 
 router.delete('/faction-applications/:id', requireAdmin, async (req, res) => {
@@ -600,7 +609,11 @@ router.patch('/support/:id', requireStaffOrAdmin, async (req, res) => {
     'UPDATE support_tickets SET "status" = ?, "staffResponse" = ?, "reviewedBy" = ?, "updatedAt" = ? WHERE "id" = ?',
     [status, staffResponse.trim(), req.admin.username, now, id]
   );
-  res.json(await db.get('SELECT * FROM support_tickets WHERE "id" = ?', [id]));
+  const updated = await db.get('SELECT * FROM support_tickets WHERE "id" = ?', [id]);
+  if (status === 'resolved' || status === 'rejected') {
+    notifySupportResult(updated).catch(() => {});
+  }
+  res.json(updated);
 });
 
 router.delete('/support/:id', requireAdmin, async (req, res) => {

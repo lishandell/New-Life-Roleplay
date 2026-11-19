@@ -293,6 +293,7 @@ export function AdminPortal({ discordUser, onToast, onSiteRefresh }) {
               {tab === 'news' && (
                 <NewsManager
                   items={dashboard?.news || []}
+                  settings={dashboard?.settings || {}}
                   onRefresh={refreshAll}
                   onToast={onToast}
                 />
@@ -300,6 +301,7 @@ export function AdminPortal({ discordUser, onToast, onSiteRefresh }) {
               {tab === 'whitelist' && (
                 <WhitelistManager
                   items={dashboard?.whitelist || []}
+                  settings={dashboard?.settings || {}}
                   onRefresh={refreshAll}
                   onToast={onToast}
                 />
@@ -308,6 +310,7 @@ export function AdminPortal({ discordUser, onToast, onSiteRefresh }) {
                 <FactionsManager
                   factions={dashboard?.factions || []}
                   applications={dashboard?.factionApplications || []}
+                  settings={dashboard?.settings || {}}
                   onRefresh={refreshAll}
                   onToast={onToast}
                 />
@@ -323,6 +326,7 @@ export function AdminPortal({ discordUser, onToast, onSiteRefresh }) {
               {tab === 'support' && (
                 <SupportManager
                   items={dashboard?.supportTickets || []}
+                  settings={dashboard?.settings || {}}
                   onRefresh={refreshAll}
                   onToast={onToast}
                 />
@@ -446,7 +450,65 @@ function OverviewTab({ stats = {}, onNavigate }) {
   );
 }
 
-function NewsManager({ items, onRefresh, onToast }) {
+function ModuleWebhookCard({
+  title,
+  description,
+  settingKey,
+  settings = {},
+  onRefresh,
+  onToast,
+}) {
+  const [url, setUrl] = useState(settings[settingKey] || '');
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setUrl(settings[settingKey] || '');
+  }, [settings, settingKey]);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await api.updateSettings({ [settingKey]: url.trim() });
+      onToast('Webhook Guardado', `Webhook de ${title} actualizado.`, 'success');
+      if (onRefresh) await onRefresh();
+    } catch (err) {
+      onToast('Error', err.message, 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="glass-card rounded-2xl p-5 space-y-2.5 text-xs border border-[#5865F2]/30">
+      <div>
+        <h3 className="text-sm font-bold text-white flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-[#5865F2]" />
+          {title}
+        </h3>
+        <p className="text-[11px] text-gray-400 mt-0.5">{description}</p>
+      </div>
+      <div className="flex flex-col sm:flex-row gap-2.5">
+        <input
+          type="url"
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          placeholder="https://discord.com/api/webhooks/..."
+          className="flex-1 bg-nl-900 border border-gray-700 rounded-xl px-3.5 py-2 text-white font-mono focus:outline-none focus:border-nl-red"
+        />
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={saving}
+          className="bg-[#5865F2] hover:bg-[#4752C4] text-white font-bold px-4 py-2 rounded-xl transition-all shrink-0"
+        >
+          {saving ? 'Guardando...' : 'Guardar Webhook'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function NewsManager({ items, settings, onRefresh, onToast }) {
   const emptyForm = {
     title: '',
     summary: '',
@@ -510,6 +572,15 @@ function NewsManager({ items, onRefresh, onToast }) {
 
   return (
     <div className="space-y-6">
+      <ModuleWebhookCard
+        title="Webhook de Discord — Noticias & Parches"
+        description="Cada vez que publiques una noticia o parche aquí, se enviará automáticamente a este canal de Discord."
+        settingKey="discordNewsWebhookUrl"
+        settings={settings}
+        onRefresh={onRefresh}
+        onToast={onToast}
+      />
+
       <form onSubmit={handleSubmit} className="glass-card rounded-2xl p-6 space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-base font-bold text-white">
@@ -671,7 +742,7 @@ function NewsManager({ items, onRefresh, onToast }) {
   );
 }
 
-function WhitelistManager({ items, onRefresh, onToast }) {
+function WhitelistManager({ items, settings, onRefresh, onToast }) {
   const [filter, setFilter] = useState('pending');
   const [selected, setSelected] = useState(null);
   const [note, setNote] = useState('');
@@ -697,6 +768,14 @@ function WhitelistManager({ items, onRefresh, onToast }) {
 
   return (
     <div className="space-y-4">
+      <ModuleWebhookCard
+        title="Webhook de Discord — Whitelist"
+        description="Envía alertas automáticas a este canal cuando un jugador envía su Whitelist y cuando el Staff la aprueba o rechaza."
+        settingKey="discordWebhookUrl"
+        settings={settings}
+        onRefresh={onRefresh}
+        onToast={onToast}
+      />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-base font-bold text-white">
           Solicitudes de Whitelist ({filtered.length})
@@ -1303,32 +1382,6 @@ function SettingsManager({ settings, onRefresh, onToast, onlyMtaDiscord = false 
               className="w-full bg-nl-900 border border-gray-700 rounded-xl px-3 py-2 text-white"
             />
           </div>
-          <div>
-            <label className="block text-gray-400 mb-1">
-              Discord Webhook URL para Whitelist (Solicitudes y Resultados)
-            </label>
-            <input
-              type="url"
-              placeholder="https://discord.com/api/webhooks/..."
-              value={form.discordWebhookUrl || ''}
-              onChange={(e) => setForm({ ...form, discordWebhookUrl: e.target.value })}
-              className="w-full bg-nl-900 border border-gray-700 rounded-xl px-3 py-2 text-white font-mono"
-            />
-          </div>
-          <div>
-            <label className="block text-gray-400 mb-1">
-              Discord Webhook URL para Noticias & Parches (Publicación automática)
-            </label>
-            <input
-              type="url"
-              placeholder="https://discord.com/api/webhooks/..."
-              value={form.discordNewsWebhookUrl || ''}
-              onChange={(e) =>
-                setForm({ ...form, discordNewsWebhookUrl: e.target.value })
-              }
-              className="w-full bg-nl-900 border border-gray-700 rounded-xl px-3 py-2 text-white font-mono"
-            />
-          </div>
 
           <div className="border-t border-gray-800 pt-4">
             <h3 className="text-sm font-bold text-white mb-3">
@@ -1393,8 +1446,8 @@ function SettingsManager({ settings, onRefresh, onToast, onlyMtaDiscord = false 
           </>
         )}
 
-          {/* MONITOR MTA & AUTO-ESTATUS DISCORD */}
-          <div className={`${onlyMtaDiscord ? '' : 'border-t border-gray-800 pt-5'} space-y-4 text-xs`}>
+        {onlyMtaDiscord && (
+          <div className="space-y-4 text-xs">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
                 <h3 className="text-sm font-bold text-white">
@@ -1600,6 +1653,7 @@ function SettingsManager({ settings, onRefresh, onToast, onlyMtaDiscord = false 
               </div>
             </div>
           </div>
+        )}
 
         <button
           type="submit"
@@ -1650,7 +1704,7 @@ function SettingsManager({ settings, onRefresh, onToast, onlyMtaDiscord = false 
   );
 }
 
-function FactionsManager({ factions, applications, onRefresh, onToast }) {
+function FactionsManager({ factions, applications, settings, onRefresh, onToast }) {
   const [form, setForm] = useState({
     name: '',
     shortCode: 'LSPD',
@@ -1715,6 +1769,15 @@ function FactionsManager({ factions, applications, onRefresh, onToast }) {
 
   return (
     <div className="space-y-8">
+      <ModuleWebhookCard
+        title="Webhook de Discord — Facciones & Oposiciones"
+        description="Envía alertas automáticas a este canal exclusivo cuando un jugador postula a una facción o cuando su oposición es aceptada/rechazada."
+        settingKey="discordFactionsWebhookUrl"
+        settings={settings}
+        onRefresh={onRefresh}
+        onToast={onToast}
+      />
+
       <form onSubmit={handleAddFaction} className="glass-card rounded-2xl p-6 space-y-4">
         <h2 className="text-base font-bold text-white">Crear Nueva Facción</h2>
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 text-xs">
@@ -2090,7 +2153,7 @@ function StoreManager({ items, settings, onRefresh, onToast }) {
   );
 }
 
-function SupportManager({ items, onRefresh, onToast }) {
+function SupportManager({ items, settings, onRefresh, onToast }) {
   const [filter, setFilter] = useState('open');
   const [selected, setSelected] = useState(null);
   const [response, setResponse] = useState('');
@@ -2108,6 +2171,14 @@ function SupportManager({ items, onRefresh, onToast }) {
 
   return (
     <div className="space-y-4">
+      <ModuleWebhookCard
+        title="Webhook de Discord — Soporte, Reportes & Apelaciones"
+        description="Envía alertas automáticas a este canal privado del Staff cuando un jugador crea un reporte/apelación y cuando se resuelve."
+        settingKey="discordSupportWebhookUrl"
+        settings={settings}
+        onRefresh={onRefresh}
+        onToast={onToast}
+      />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-base font-bold text-white">
           Tickets de Soporte, Reportes & Apelaciones ({filtered.length})

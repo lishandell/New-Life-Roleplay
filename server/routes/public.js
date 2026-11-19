@@ -229,10 +229,7 @@ router.post('/factions/apply', async (req, res) => {
     ]
   );
 
-  const webhookUrl =
-    (await getSetting('discordFactionsWebhookUrl')) ||
-    (await getSetting('discordWebhookUrl')) ||
-    '';
+  const webhookUrl = await getSetting('discordFactionsWebhookUrl');
   if (webhookUrl) {
     await sendDiscordEmbed(webhookUrl, {
       title: `🏛️ Nueva Postulación a Facción: ${faction.name}`,
@@ -299,10 +296,7 @@ router.post('/support', async (req, res) => {
     ]
   );
 
-  const webhookUrl =
-    (await getSetting('discordSupportWebhookUrl')) ||
-    (await getSetting('discordWebhookUrl')) ||
-    '';
+  const webhookUrl = await getSetting('discordSupportWebhookUrl');
   if (webhookUrl) {
     const typeLabel =
       type === 'appeal'

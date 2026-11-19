@@ -89,6 +89,56 @@ export async function notifyWhitelistResult(app) {
   });
 }
 
+export async function notifyFactionResult(app) {
+  const webhookUrl = await getSetting('discordFactionsWebhookUrl');
+  if (!webhookUrl) return;
+
+  const approved = app.status === 'approved';
+  const mention = app.discordId ? `<@${app.discordId}>` : app.discordTag;
+
+  await sendDiscordEmbed(webhookUrl, {
+    title: approved
+      ? `✅ Oposición Aceptada — ${app.factionName}`
+      : `❌ Oposición Rechazada — ${app.factionName}`,
+    description: `La postulación **${app.trackingCode}** de ${mention} (**${app.characterName}**) para **${app.factionName}** ha sido **${
+      approved ? 'ACEPTADA' : 'RECHAZADA'
+    }**.`,
+    color: approved ? 0x10b981 : 0xef4444,
+    fields: [
+      ...(app.staffNote
+        ? [{ name: 'Nota del Líder / Staff', value: app.staffNote, inline: false }]
+        : []),
+      { name: 'Revisado por', value: app.reviewedBy || 'Staff', inline: true },
+    ],
+    timestamp: new Date().toISOString(),
+  });
+}
+
+export async function notifySupportResult(ticket) {
+  const webhookUrl = await getSetting('discordSupportWebhookUrl');
+  if (!webhookUrl) return;
+
+  const resolved = ticket.status === 'resolved';
+  const mention = ticket.discordId ? `<@${ticket.discordId}>` : ticket.discordTag;
+
+  await sendDiscordEmbed(webhookUrl, {
+    title: resolved
+      ? `✅ Ticket Resuelto (${ticket.ticketCode})`
+      : `❌ Ticket Cerrado / Rechazado (${ticket.ticketCode})`,
+    description: `El ticket **${ticket.subject}** de ${mention} fue marcado como **${
+      resolved ? 'RESUELTO' : 'RECHAZADO'
+    }**.`,
+    color: resolved ? 0x10b981 : 0xef4444,
+    fields: [
+      ...(ticket.staffResponse
+        ? [{ name: 'Respuesta del Staff', value: ticket.staffResponse, inline: false }]
+        : []),
+      { name: 'Atendido por', value: ticket.reviewedBy || 'Staff', inline: true },
+    ],
+    timestamp: new Date().toISOString(),
+  });
+}
+
 export async function assignDiscordWhitelistRole(discordId) {
   const botToken = process.env.DISCORD_BOT_TOKEN;
   const guildId = process.env.DISCORD_GUILD_ID;

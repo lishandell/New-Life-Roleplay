@@ -163,12 +163,7 @@ export async function sendServerStatusEmbedToDiscord() {
     settings = await getAllSettingsMap();
   }
 
-  const webhookUrl =
-    settings.discordStatusWebhookUrl ||
-    settings.discordNewsWebhookUrl ||
-    settings.discordWebhookUrl ||
-    process.env.DISCORD_WEBHOOK_URL ||
-    '';
+  const webhookUrl = settings.discordStatusWebhookUrl || '';
 
   if (!webhookUrl) {
     return { ok: false, error: 'No hay Webhook de Discord configurado para el estado.' };
